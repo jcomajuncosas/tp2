@@ -1,8 +1,6 @@
 # Setup / Reconnexió — De TP1 a TP2
 ### Python per al so: el mateix llenguatge, nou context
 
-> **Instruccions de muntatge:** Crea un Google Doc amb aquest contingut (pots copiar/enganxar i formatar amb els estils de títol de Google Docs). Penja'l com a "book" al tema "Sessió 1" del Classroom, abans de la sessió. No cal que els alumnes el "treballin"; és material de consulta per durant tot el bloc 1-3.
-
 ---
 
 Fa un any vau aprendre Python amb exemples musicals (notes MIDI, escales, seqüències). A TP2 farem servir **el mateix Python**, però ara els "números" no representen notes sinó **mostres de so**. La sintaxi que ja coneixeu reapareixerà constantment — només canvia el que hi posem a dins.
