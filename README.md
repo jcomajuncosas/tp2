@@ -94,9 +94,3 @@ Projecte final (Thonny):
 - Rols NumPy: com a dalt.
 - Rols signalflow (Sinte, Vocoder): `pip3 install signalflow mido python-rtmidi`.
 - **Nota Mac Apple Silicon:** crear un venv amb Python 3.13 explícit i `--copies` (no symlinks). Veure instruccions detallades a `05_sintesi/sessio09_fm_synth/recursos/challenges.md` (Challenge 2).
-
-## Pendents transversals (post-curs)
-
-1. **Solucions de referència:** generar fitxers `solucio.py`/`solucio.ipynb` per a tots els `assignment.py`/`notebook.ipynb` amb TODO (S1-S12 + 5 templates del projecte final) — per ús exclusiu del docent, no distribuïts als alumnes.
-
-2. **Minicurset de mecanografia de codi** (opcional, fora de l'abast de TP2): recurs autoadministrat per practicar fluïdesa motriu amb patrons sintàctics del curs (`for i in range(n)`, `def process(self, n):`, l'esquelet ADSR, el bucle de blocs...). Disseny acordat (còpia conscient → reproducció de memòria), format final pendent de decidir.
