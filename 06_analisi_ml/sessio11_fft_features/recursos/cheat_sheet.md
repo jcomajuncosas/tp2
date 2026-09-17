@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 11
 ### Bloc 6: FFT pràctic i extracció de features
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 11".
-
 ---
 
 ## 1. FFT manual amb NumPy

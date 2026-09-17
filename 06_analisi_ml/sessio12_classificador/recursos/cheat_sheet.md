@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 12
 ### Bloc 7: Classificadors (KNN, Decision Tree, SVM)
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 12".
-
 ---
 
 ## 1. Train/test split

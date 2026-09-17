@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 2
 ### El so com a fitxer: WAV, mixing i loops
 
-> **Instruccions de muntatge:** Crea un Google Doc amb aquest contingut i penja'l com a "book" al tema "Sessió 2" del Classroom.
-
 ---
 
 A la Sessió 1 vam generar so com a array (`wave`). Avui aprenem a **desar-lo a disc** i **llegir-ne d'altres**, i a **combinar** diversos sons. La connexió amb TP1 aquí és més subtil que a la Sessió 1, però hi és:

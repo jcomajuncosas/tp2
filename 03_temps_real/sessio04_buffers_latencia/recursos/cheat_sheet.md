@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 4
 ### Bloc 3b: El model callback — àudio en temps real
 
-> **Instruccions de muntatge:** Crea un Google Doc amb aquest contingut i penja'l com a "book" al tema "Sessió 4" del Classroom.
-
 ---
 
 ## 1. Per què el model blocking no és suficient per a temps real

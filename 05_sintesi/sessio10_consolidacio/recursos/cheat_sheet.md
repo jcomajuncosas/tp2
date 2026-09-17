@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 10
 ### Bloc 5c: Consolidació — resum complet del Bloc 5 (S8+S9+S10)
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 10".
-
 ---
 
 ## 1. Profiling: per què processem en blocs vectoritzats

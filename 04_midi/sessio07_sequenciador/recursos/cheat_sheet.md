@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 7
 ### Bloc 4b: `pretty_midi`, seqüenciador/arpegiador i timing precís
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 7".
-
 ---
 
 ## 1. `pretty_midi`: MIDI d'alt nivell

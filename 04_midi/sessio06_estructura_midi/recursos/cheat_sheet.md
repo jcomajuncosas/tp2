@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 6
 ### Bloc 4a: Estructura MIDI i `mido`
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 6".
-
 ---
 
 ## 1. Què és MIDI?

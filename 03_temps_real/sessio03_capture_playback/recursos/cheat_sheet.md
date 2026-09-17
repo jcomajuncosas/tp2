@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 3
 ### Bloc 3a: Captura, playback i efectes offline (blocking)
 
-> **Instruccions de muntatge:** Crea un Google Doc amb aquest contingut i penja'l com a "book" al tema "Sessió 3" del Classroom.
-
 ---
 
 ## 1. El model blocking

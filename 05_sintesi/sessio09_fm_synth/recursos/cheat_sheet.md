@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 9
 ### Bloc 5b: Arquitectura UGen, control rate, FM, integració temps real + MIDI
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 9".
-
 ---
 
 ## 1. El problema: `generate(duration)` no recorda la fase
@@ -72,7 +70,6 @@ class LFO:
         out = np.sin(phases)
         self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
-
 
 def vibrato(base_freq, lfo_freq, depth, duration, sample_rate=44100, block=512):
     lfo = LFO(freq=lfo_freq)

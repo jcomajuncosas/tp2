@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 8
 ### Bloc 5a: Síntesi amb classes — Oscillator, Envelope, SamplePlayer
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 8".
-
 ---
 
 ## 1. Per què classes, ara?

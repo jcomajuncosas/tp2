@@ -1,8 +1,6 @@
 # Cheat sheet — Sessió 5
 ### Bloc 3c: Efectes en temps real — eco, distorsió i control amb sliders
 
-> **Instruccions de muntatge:** Crea un Google Doc i penja'l com a "book" al tema "Sessió 5".
-
 ---
 
 ## 1. El repte dels efectes amb memòria
