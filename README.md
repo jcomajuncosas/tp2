@@ -1,6 +1,6 @@
 # Programació per a Sonòlegs (Python) — TP2 2026/27
 
-Material docent organitzat per blocs temàtics i sessions (15 sessions de 2h).
+Materials del curs, organitzats per blocs temàtics i sessions (15 sessions de 2h).
 
 ## Estructura de carpetes
 
@@ -25,8 +25,8 @@ TP2_2627/
 │   ├── sessio11_fft_features/
 │   └── sessio12_classificador/
 └── 07_projecte_final/
-    ├── sessio12_arquitectura_comuna/   ← templates + guia multi-sessió
-    └── sessio13_implementacio_rols/    ← redirecció a sessio12
+    ├── sessio12_arquitectura_comuna/   ← templates del projecte final
+    └── sessio13_implementacio_rols/    ← continuació de sessio12
 ```
 
 ## Sessions
@@ -49,17 +49,19 @@ TP2_2627/
 
 Les sessions 15 (assaig) i el concert final es realitzen fora del calendari lectiu i no generen material de programació.
 
-## Estructura de cada sessió
+## Què hi ha a cada sessió
 
-| Fitxer | Format | Ús |
-|---|---|---|
-| `guia.md` | Markdown | Pla de la sessió: objectius, horari, decisions pedagògiques, connexions amb TP1 |
-| `exemples.py` | Script Python | Demo per a Thonny (entorn local, temps real) |
-| `notebook.ipynb` | Jupyter/Colab | Mini-repte amb autotest. Sessions S4-S5 usen `assignment.py` per a Thonny |
-| `build.sh` | Script | `./build.sh` genera `docx/` (ignorat per git) a partir dels `.md` |
-| `recursos/` | Variat | `cheat_sheet.md`, `warmup_quiz.md`, `slides_outline.md`, `patches_blocX.ipynb`, `audio/` |
+| Fitxer | Ús |
+|---|---|
+| `notebook.ipynb` | El mini-repte de la sessió, amb autotests. El treballes des de la teva còpia al Classroom (no cal que en facis cap a mà). |
+| `assignment.py` | Variant per a Thonny, a les sessions de temps real (S4, S5, S9, S10). |
+| `recursos/` | Material de consulta: `cheat_sheet.md` (referència ràpida), `exemples.py` (demo per a Thonny, temps real), `patches_blocX.ipynb` (demos per a Colab) i media (`audio/`, `midi/`, `dataset/`). |
 
-## Accés als notebooks des de Google Colab
+## Com obrir el material
+
+**Mini-reptes (`notebook.ipynb`) → Google Classroom.** Entra a la tasca de la sessió i obre la teva còpia: s'obre a Colab, es desa sola al teu Drive mentre treballes, i quan acabis prems **Lliura**. És la teva còpia personal, no cal fer-ne cap.
+
+**Patches i demos de consulta (`recursos/patches_blocX.ipynb`) → Colab.** Obre'ls directament amb el botó *Open in Colab* de dalt de cada notebook, o amb aquest enllaç canviant la ruta:
 
 ```
 https://colab.research.google.com/github/jcomajuncosas/tp2/blob/main/RUTA/AL/NOTEBOOK.ipynb
@@ -67,7 +69,7 @@ https://colab.research.google.com/github/jcomajuncosas/tp2/blob/main/RUTA/AL/NOT
 
 Exemple:
 ```
-https://colab.research.google.com/github/jcomajuncosas/tp2/blob/main/06_analisi_ml/sessio11_fft_features/notebook.ipynb
+https://colab.research.google.com/github/jcomajuncosas/tp2/blob/main/06_analisi_ml/sessio11_fft_features/recursos/patches_bloc6.ipynb
 ```
 
 ## Projecte final
