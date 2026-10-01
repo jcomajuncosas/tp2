@@ -34,7 +34,7 @@ COMMIT_MSG="${SYNC_MSG:-Sync material estudiant $DATESTR}"
 # Llista buida = només es publica el README de l'arrel.
 RELEASED=(
   'sessio01_reconnexio'
-  # 'sessio02_wav_io'
+  'sessio02_wav_io'
   # 'sessio03_capture_playback'
   # 'sessio04_buffers_latencia'
   # 'sessio05_efecte_temps_real'
