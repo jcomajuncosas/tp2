@@ -35,7 +35,7 @@ COMMIT_MSG="${SYNC_MSG:-Sync material estudiant $DATESTR}"
 RELEASED=(
   'sessio01_reconnexio'
   'sessio02_wav_io'
-  # 'sessio03_capture_playback'
+  'sessio03_capture_playback'
   # 'sessio04_buffers_latencia'
   # 'sessio05_efecte_temps_real'
   # 'sessio06_estructura_midi'
