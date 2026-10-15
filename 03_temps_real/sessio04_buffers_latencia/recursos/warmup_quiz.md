@@ -16,10 +16,10 @@ def echo(data, delay_samples, decay=0.5):
 
 **Quin problema té la línia A?**
 
-- A) `data` hauria de ser un float, no un array
-- ✅ B) `result = data` és una referència, no una còpia — modifica l'array original
-- C) No hi ha cap problema
-- D) `decay` hauria de ser negatiu per a un eco
+- A) `data` hauria de ser un float, no un array de NumPy
+- ✅ B) `result` no és una còpia: modifica també `data`
+- C) No hi ha cap problema, el codi és correcte
+- D) `decay` hauria de ser negatiu per fer un eco
 
 ---
 
@@ -48,34 +48,35 @@ def echo(data, delay_samples, decay=0.5):
 ### Pregunta 4 — Predicció (pass-through)
 
 ```python
-def process(indata, outdata, frames, time, status):
+def process(indata, outdata, frames, time_info, status):
     outdata[:] = indata
 ```
 
-**Qué fa aquest callback?**
+**Què fa aquest callback?**
 
 - A) Grava l'entrada a un fitxer WAV
 - B) Silencia la sortida (envia zeros)
-- ✅ C) Copia l'entrada directament a la sortida sense modificar-la (pass-through)
-- D) Reprodueix un so generat sintetitzament
+- ✅ C) Copia l'entrada a la sortida sense modificar-la
+- D) Reprodueix un so sintetitzat
 
 ---
 
 ### Pregunta 5 — Detecció d'error (callback lent)
 
 ```python
-def process(indata, outdata, frames, time, status):
-    import time as t
-    t.sleep(0.5)          # espera 0.5 segons
+import time
+
+def process(indata, outdata, frames, time_info, status):
+    time.sleep(0.5)       # espera 0.5 segons
     outdata[:] = indata
 ```
 
-**Qué passarà si `blocksize=512` i `sample_rate=44100` (buffer de ~11ms)?**
+**Què passarà si `blocksize=512` i `sample_rate=44100` (buffer de ~11ms)?**
 
-- A) Funcionarà perfectament — sounddevice esperarà que acabi
-- ✅ B) Hi haurà glitches (salts/interrupcions en l'àudio) perquè el callback triga 500ms però el buffer dura 11ms
-- C) El programa donarà error i s'aturarà
-- D) La latència augmentarà a 500ms però el so serà correcte
+- A) Funcionarà bé: sounddevice esperarà que acabi
+- ✅ B) El so es trencarà: hi haurà talls (glitches)
+- C) Python donarà un error i el programa s'aturarà
+- D) El retard pujarà a 500 ms, però el so serà net
 
 *(Comentari: el sistema necessita el resultat cada 11ms. Si el callback triga 500ms, el sistema no pot esperar i els buffers es buiden o col·lapsen → glitch. És el risc principal del model callback.)*
 
@@ -94,13 +95,13 @@ def process(indata, outdata, frames, time, status):
 
 ---
 
-### Pregunta 7 — Concepte (per que Colab no funciona per a temps real)
+### Pregunta 7 — Concepte (per què Colab no funciona per a temps real)
 
 **Per quin motiu el codi de temps real (`sd.Stream` amb callback) no funciona a Colab?**
 
-- A) Colab no té instal·lat `sounddevice`
+- A) Colab no té instal·lada la llibreria `sounddevice`
 - B) Els notebooks de Jupyter no permeten bucles infinits
-- ✅ C) El codi de Colab s'executa en un servidor remot — el so hauria de viatjar per la xarxa, cosa incompatible amb latències de ~10ms
-- D) Python no suporta threads en entorns de núvol
+- ✅ C) El codi corre en un servidor remot, lluny del teu so
+- D) Python no pot crear threads en entorns al núvol
 
 *(Comentari: contrast amb WebAudio API del navegador, que sí que és temps real perquè s'executa localment al client.)*
