@@ -1,91 +1,107 @@
 # Warm-up — Sessió 5
 ### Format: Google Forms (mode Quiz, autocorrecció activada)
 > Temps suggerit: 5-8 minuts.
+> ⚙️ Al Form: activa **"Ordena les opcions aleatòriament"** a cada pregunta.
+
+Criteri: les opcions tenen llargades semblants i cada distractor és un **error real** que fan els alumnes (o una intuïció raonable però falsa). Les preguntes 4, 6 i 7 són *preview*: no s'espera que les encertin; el dubte es resol a classe.
 
 ---
 
-### Pregunta 1 — Repàs Sessió 4 (callback)
+### Pregunta 1 — Repàs S04 (deadline)
 
-**Quin és el problema principal si el callback tarda més que la durada del buffer?**
+**La callback tarda més que la durada d'un bloc. Què passa?**
 
-- A) El programa s'atura amb un error
-- ✅ B) Hi ha glitches (salts/interrupcions) en l'àudio
-- C) El gain s'aplica incorrectament
-- D) El stream es reinicia automàticament
+- A) L'stream augmenta el blocksize per compensar-ho
+- B) El so arriba una mica més tard, però sense talls
+- ✅ C) Hi ha talls perquè la sortida no arriba a temps
+- D) Python llança una excepció i l'stream s'atura
 
 ---
 
-### Pregunta 2 — Repàs Sessió 4 (variable global)
+### Pregunta 2 — Repàs S04 (variables globals)
 
 ```python
 gain = 0.5
 
-def callback(indata, outdata, frames, time, status):
+def callback(indata, outdata, frames, time_info, status):
     outdata[:] = indata * gain
 ```
 
-**Si des del programa principal fem `gain = 0.0`, qué passarà al so en la propera crida al callback?**
+**Amb l'stream obert, el bucle principal fa `gain = 0.0`. Què se sent?**
 
-- A) Res — el callback no veu el canvi fins que el stream es reinicia
-- ✅ B) La sortida serà silenci — el callback llegeix la variable global actualitzada
-- C) Error: no es pot modificar una variable usada dins un callback
-- D) La sortida serà soroll aleatori
+- A) Res canvia: l'stream va copiar `gain` en obrir-se
+- B) Res canvia: falta `global gain` dins la callback
+- C) Un error: no es pot canviar una variable en ús
+- ✅ D) Silenci, des de la següent crida de la callback
 
----
-
-### Pregunta 3 — Nou: per qué cal un buffer per a l'eco en temps real
-
-**Per qué no podem implementar eco en temps real de la mateixa manera que offline (`result[delay:] += data[:-delay] * decay`)?**
-
-- A) Perquè `np.copy` no funciona dins un callback
-- B) Perquè el callback no pot usar NumPy
-- ✅ C) Perquè el callback rep un bloc curt (~23ms) i no té accés a les mostres passades — que ja han marxat
-- D) Perquè la suma de arrays és massa lenta per a temps real
+*(Comentari: el distractor B és el més perillós. `global` només cal per ESCRIURE una global des de dins d'una funció; per llegir-la no cal. Avui la callback haurà d'escriure-hi, i llavors sí.)*
 
 ---
 
-### Pregunta 4 — Intuïció: un buffer que es va omplint
+### Pregunta 3 — Repàs S04 (distorsió)
 
-**Imagina una cinta curta on vas gravant trossos nous d'àudio, un darrere l'altre, sense parar mai. Quan la cinta s'omple, què té més sentit que passi amb el tros més antic?**
+```python
+def disto_callback(indata, outdata, frames, time_info, status):
+    outdata[:] = np.tanh(indata * drive)
+```
 
-- A) Es queda per sempre al mateix lloc, no es pot esborrar
-- ✅ B) Surt fora (es perd) per deixar espai al tros nou que entra
-- C) Es duplica i ocupa el doble d'espai
-- D) Es converteix automàticament en silenci però no desapareix
+**Aquesta callback, ha de recordar alguna cosa del bloc anterior?**
 
-*(Comentari: això és exactament un buffer circular — avui veurem com `np.roll` fa precisament aquest "desplaçar i sobreescriure" amb el buffer de retard.)*
-
----
-
-### Pregunta 5 — Concepte (distorsió vs eco en temps real)
-
-**Per quin motiu la distorsió és més simple d'implementar en temps real que l'eco?**
-
-- A) Perquè `np.clip` és més ràpid que `np.roll`
-- ✅ B) Perquè la distorsió no té memòria — cada bloc és independent i no necessita recordar mostres passades
-- C) Perquè la distorsió no necessita un callback
-- D) No hi ha diferència de complexitat
+- ✅ A) No: cada mostra depèn només d'ella mateixa
+- B) Sí: l'última mostra, per evitar clics entre blocs
+- C) Sí: el `drive` anterior, per si ha canviat
+- D) Depèn del blocksize: amb blocs petits, sí
 
 ---
 
-### Pregunta 6 — ipywidgets (concepte)
+### Pregunta 4 — Preview (oscil·lador)
 
-**Quan usem `@widgets.interact` a Colab per visualitzar l'efecte d'un eco, estem fent àudio en temps real?**
+**A cada crida generes un sinus de 440 Hz amb `t = np.arange(frames) / sample_rate`. Què sents?**
 
-- ✅ A) No — estem modificant paràmetres i veient el resultat en un gràfic, però el codi s'executa al servidor de Colab (no hi ha so real)
-- B) Sí — ipywidgets activa WebAudio al navegador
-- C) Sí — Colab té accés al micròfon via ipywidgets
-- D) No — ipywidgets no pot mostrar gràfics
+- A) Un 440 Hz net, idèntic al que generaries offline
+- ✅ B) Un 440 Hz, però amb un brunzit greu superposat
+- C) Un to més agut, perquè els blocs s'encavalquen
+- D) Talls de silenci, cada vegada que `t` torna a 0
+
+*(Comentari: es comprova en directe amb `demo_sinus_sense_memoria()`. El brunzit és de ~43 Hz: les crides per segon.)*
 
 ---
 
-### Pregunta 7 — Preview Bloc 5 (per qué classes)
+### Pregunta 5 — Repàs S03/S04 (eco offline)
 
-**Si volem tenir DOS ecos simultanis (delays de 0.2s i 0.5s) usant l'enfocament de buffer global, quants buffers globals necessitem?**
+**Per què l'eco de la S03 (`resultat[d:] += x[:-d] * v`) no funciona tal qual dins la callback?**
 
-- A) 1 — podem reutilitzar el mateix buffer
-- ✅ B) 2 — un per a cada delay diferent
-- C) 0 — podem calcular-ho sense buffer
-- D) Depèn del `blocksize`
+- A) La indexació `[:-d]` és massa lenta per al temps real
+- B) Dins la callback no es pot modificar un array amb `+=`
+- C) Caldria convertir el bloc a mono abans de sumar-lo
+- ✅ D) `d` és més llarg que el bloc: aquelles mostres ja no hi són
 
-*(Comentari: amb classes, cadascuna portaria el seu propi buffer intern. Veurem com al Bloc 5.)*
+---
+
+### Pregunta 6 — Preview (la cinta)
+
+**Tens una cinta de 6 caselles. A cada crida hi entren 2 mostres noves per un extrem i en surten 2 per l'altre. Una mostra que entra ara, quantes crides després surt?**
+
+- A) 1
+- B) 2
+- ✅ C) 3
+- D) 6
+
+*(Comentari: es comprova a la taula de la secció 2 del Colab. Retard = mida de la cinta = 6 mostres = 3 crides de 2.)*
+
+---
+
+### Pregunta 7 — Preview (estat)
+
+**Una callback fa un trèmolo (un LFO de 5 Hz) i després un eco de 0.3 s. Què ha de sobreviure d'una crida a la següent?**
+
+- A) Només la cinta de l'eco: un LFO tan lent no es nota
+- ✅ B) La fase de l'LFO i també la cinta de l'eco
+- C) Res, si el blocksize és prou gran (2048 o més)
+- D) El bloc d'entrada anterior, per a tots dos efectes
+
+*(Comentari: A és la trampa: com més lent és l'LFO, PITJOR sona si s'oblida la fase. En un bloc de 23 ms un LFO de 5 Hz només fa ~0.12 cicles i tornaria a començar. Ho comprovaran a la reflexió de l'assignment.)*
+
+---
+
+**Distribució de respostes correctes:** A (1), B (2), C (2), D (2).

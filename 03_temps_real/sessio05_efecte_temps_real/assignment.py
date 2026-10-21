@@ -1,12 +1,28 @@
 """
 Assignment — Bloc 3c, Sessió 5
-Mini-repte: Efectes en temps real — eco i distorsió
+Mini-repte: efectes amb memòria (trèmolo, eco amb realimentació, ordre d'efectes)
+
+⚠️  AURICULARS OBLIGATORIS. Micròfon + altaveus = realimentació (Larsen).
 
 IMPORTANT: executa amb Thonny (entorn local). NO funciona a Colab.
 Un cop completat, puja aquest fitxer al Classroom.
 
-Completa les seccions marcades amb # TODO.
-Cada part té asserts per verificar la lògica (sense necessitar hardware).
+COM TREBALLAR-HI A THONNY:
+  1. Completa un TODO.
+  2. Prem F5 (Run). Això només DEFINEIX les funcions; no sona res.
+  3. A la consola (Shell), crida la funció d'escolta d'aquella part:
+         >>> escolta_part1()
+     Cada escolta_partN() primer comprova la teva callback i, si és
+     correcta, obre l'stream perquè la sentis.
+  4. Passa al TODO següent. Pots tornar a cridar qualsevol part quan vulguis.
+
+Parts:  1 trèmolo (memòria d'un número)
+        2 eco amb realimentació (memòria d'una cinta)
+        3 eco → distorsió (la fas tu sencera) i comparació amb distorsió → eco
+        4 reflexió · CHALLENGE stutter
+
+Tens recursos/exemples.py al costat: hi trobaràs el sinus amb fase i l'eco
+d'una repetició. Fes-los servir de model, però entén cada línia.
 """
 
 import sounddevice as sd
@@ -16,249 +32,395 @@ sample_rate = 44100
 blocksize = 1024
 
 
-# ---------------------------------------------------------------
-# PART 1 — Implementa el callback de distorsió
+# ===============================================================
+# PART 1 — Trèmolo
 #
-# El callback ha d'aplicar:
-#   1. Amplificar l'entrada per 'drive'
-#   2. Retallar entre -threshold i +threshold (np.clip)
-#   3. Normalitzar dividint per threshold
-#   4. Assignar el resultat a outdata[:, 0]
-# ---------------------------------------------------------------
-print("=== PART 1: Distorsió en temps real ===")
+#   Un trèmolo puja i baixa el volum amb un oscil·lador lent (LFO).
+#   És el mateix problema que el sinus de exemples.py: si l'LFO
+#   torna a començar a cada bloc, el trèmolo es trenca.
+#
+#   Fórmula (fes-la servir exactament així, l'autotest la comprova):
+#       lfo   = 0.5 + 0.5 * sin(fase)      → oscil·la entre 0 i 1
+#       guany = 1 - profunditat * lfo      → entre 1 i (1 - profunditat)
+#       sortida = entrada * guany
+# ===============================================================
 
-drive = 4.0
-threshold = 0.7
+rate_hz = 5.0          # velocitat del trèmolo (cicles per segon)
+profunditat = 0.8      # 0 = res, 1 = arriba al silenci
 
-def distorsio_callback(indata, outdata, frames, time, status):
+# TODO 1: declara la global 'fase_lfo' amb valor inicial 0.0
+fase_lfo = None  # <-- substitueix
+
+
+def tremolo_callback(indata, outdata, frames, time_info, status):
+    global fase_lfo
     if status:
-        print(status)
+        print("STATUS:", status)
     mono = indata[:, 0]
 
-    # TODO 1: aplica distorsió a 'mono' i assigna a outdata[:, 0]
-    # clipped = np.clip(mono * drive, -threshold, threshold)
-    # outdata[:, 0] = clipped / threshold
-    pass  # <-- substitueix
+    # TODO 2:
+    #   a) calcula les fases d'aquest bloc a partir de fase_lfo i rate_hz
+    #      (mira sinus_callback a exemples.py)
+    #   b) lfo i guany amb la fórmula de dalt
+    #   c) outdata[:, 0] = mono * guany
+    #   d) actualitza fase_lfo perquè el bloc següent continuï on s'acaba aquest
+    pass  # <-- substitueix aquest 'pass'
 
 
-# Verificació sense hardware
-_in = np.array([[0.5], [1.0], [-1.0], [0.1]], dtype='float32')
-_out = np.zeros((4, 1), dtype='float32')
-distorsio_callback(_in, _out, 4, None, None)
-
-assert not np.all(_out == 0), "outdata no s'ha modificat — implementa el TODO 1"
-assert np.max(np.abs(_out)) <= 1.0 + 1e-5, \
-    f"La sortida hauria d'estar entre -1 i 1, max={np.max(np.abs(_out)):.3f}"
-# Amb drive=4 i threshold=0.7, el valor 1.0 ha de quedar retallat:
-# 1.0 * 4 = 4.0 > 0.7 → clip a 0.7 → / 0.7 = 1.0
-assert np.isclose(abs(_out[1, 0]), 1.0, atol=0.01), \
-    f"Un valor gran hauria de quedar normalitzat a 1.0, és {abs(_out[1,0]):.3f}"
-# Un valor petit (0.1) no ha de quedar retallat:
-# 0.1 * 4 = 0.4 < 0.7 → no clip → 0.4 / 0.7 ≈ 0.571
-assert abs(_out[3, 0]) < abs(_out[1, 0]), \
-    "Un valor petit hauria de quedar menys distorsionat que un gran"
-
-print("✅ Part 1 correcta!")
-print("\nExecutant distorsió en temps real durant 8 segons. Parla o fes un so...")
-try:
-    with sd.Stream(samplerate=sample_rate, blocksize=blocksize,
-                   channels=1, dtype='float32', callback=distorsio_callback):
-        sd.sleep(8000)
-except KeyboardInterrupt:
-    pass
-print("Part 1 feta.\n")
-
-
-# ---------------------------------------------------------------
-# PART 2 — Implementa el callback d'eco
-#
-# Necessites:
-#   1. Un buffer global 'delay_buffer' de mida delay_samples
-#   2. El callback llegeix les darreres 'frames' mostres del buffer (eco)
-#   3. Suma l'entrada + eco*decay
-#   4. Actualitza el buffer (np.roll + assignar les mostres noves)
-#   5. Assigna la sortida a outdata[:, 0] (amb clip de seguretat)
-# ---------------------------------------------------------------
-print("=== PART 2: Eco en temps real ===")
-
-delay_seconds = 0.3
-decay = 0.5
-
-# TODO 2: calcula delay_samples i crea delay_buffer (np.zeros)
-delay_samples = None   # <-- int(delay_seconds * sample_rate)
-delay_buffer = None    # <-- np.zeros(delay_samples, dtype='float32')
-
-
-def eco_callback(indata, outdata, frames, time, status):
-    global delay_buffer
-    if status:
-        print(status)
-    mono = indata[:, 0]
-
-    # TODO 3: llegeix l'eco del buffer (les darreres 'frames' mostres)
-    eco = None  # <-- delay_buffer[:frames]
-
-    # TODO 4: calcula la sortida (entrada + eco*decay)
-    out = None  # <-- mono + eco * decay
-
-    # TODO 5: actualitza el buffer (roll + assignar mono a les darreres frames)
-    # delay_buffer = np.roll(delay_buffer, -frames)
-    # delay_buffer[-frames:] = mono  # escriptura: correcte
-
-    # TODO 6: assigna a outdata[:, 0] amb clip de seguretat
-    # outdata[:, 0] = np.clip(out, -1.0, 1.0)
-    pass  # <-- substitueix aquest pass quan hagis completat tots els TODOs
-
-
-# Verificació sense hardware
-assert delay_samples is not None, "Calcula delay_samples (TODO 2)"
-assert delay_buffer is not None, "Crea delay_buffer (TODO 2)"
-assert delay_samples == int(0.3 * 44100), \
-    f"delay_samples hauria de ser {int(0.3*44100)}, és {delay_samples}"
-assert len(delay_buffer) == delay_samples, \
-    f"delay_buffer hauria de tenir {delay_samples} elements, té {len(delay_buffer)}"
-
-# Test funcional: simulem dues crides
-delay_buffer_test = np.zeros(10, dtype='float32')
-_in1 = np.array([[0.8], [0.6]], dtype='float32')
-_out1 = np.zeros((2, 1), dtype='float32')
-
-# Fem una còpia temporal per al test
-_db_backup = delay_buffer.copy()
-
-# Primera crida: eco hauria de ser zeros (buffer buit)
-# Provem la lògica manualment
-eco_test = delay_buffer_test[-2:]
-out_test = np.array([0.8, 0.6]) + eco_test * 0.5
-assert np.allclose(out_test, [0.8, 0.6]), \
-    f"Primera crida: sense eco, la sortida hauria de ser igual a l'entrada. Got {out_test}"
-
-print("✅ Part 2: estructura correcta!")
-print("\nExecutant eco en temps real durant 10 segons. Parla i escolta l'eco...")
-try:
-    with sd.Stream(samplerate=sample_rate, blocksize=blocksize,
-                   channels=1, dtype='float32', callback=eco_callback):
-        # Control interactiu del decay
+def escolta_part1():
+    global rate_hz, fase_lfo
+    comprova_part1()
+    fase_lfo = 0.0
+    print("Trèmolo. Parla o toca alguna cosa sostinguda.")
+    print("Escriu una velocitat (0.5 – 20 Hz) o 'q' per sortir.\n")
+    with sd.Stream(samplerate=sample_rate,
+                   blocksize=blocksize,
+                   channels=1,
+                   dtype='float32',
+                   latency='low',
+                   callback=tremolo_callback):
         while True:
             try:
-                cmd = input(f"decay={decay:.2f} → nou valor (0.0-0.95) o 'q': ")
-                if cmd.lower() == 'q':
-                    break
-                nou = float(cmd)
-                if 0.0 <= nou <= 0.95:
-                    decay = nou
-                    print(f"Decay → {decay:.2f}")
-            except (ValueError, KeyboardInterrupt):
+                entrada = input(f"rate = {rate_hz:.1f} Hz → ")
+            except KeyboardInterrupt:
                 break
-except KeyboardInterrupt:
-    pass
-print("Part 2 feta.\n")
+            entrada = entrada.strip().strip("'\"")
+            if entrada.lower() == 'q':
+                break
+            try:
+                nou = float(entrada)
+            except ValueError:
+                print("  Escriu només un número, per exemple: 7")
+                continue
+            if 0.5 <= nou <= 20.0:
+                rate_hz = nou
+            else:
+                print("  Fora de rang (0.5 – 20 Hz)")
+    print("Stream tancat.")
 
 
-# ---------------------------------------------------------------
-# PART 3 — Combina distorsió + eco en un sol callback
+def comprova_part1():
+    global fase_lfo, rate_hz, profunditat
+    assert fase_lfo is not None, "Declara la global 'fase_lfo' (TODO 1)"
+    # Fem a mà el que fa l'stream: cridem la callback DUES vegades seguides.
+    # Truc: posem un LFO molt ràpid (un cicle cada 16 mostres) perquè es
+    # vegi el moviment dins de blocs de només 8 mostres.
+    rate_guardat, prof_guardada = rate_hz, profunditat
+    rate_hz = sample_rate / 16
+    profunditat = 0.8
+    fase_lfo = 0.0
+    entrada = np.ones((8, 1), dtype='float32')
+    blocs = []
+    try:
+        for _ in range(2):
+            sortida = np.zeros((8, 1), dtype='float32')
+            tremolo_callback(entrada, sortida, 8, None, None)
+            blocs.append(sortida[:, 0].copy())
+    except UnboundLocalError:
+        raise AssertionError("La callback no troba 'fase_lfo'. "
+                             "Hi tens la línia `global fase_lfo`?")
+    finally:
+        rate_hz, profunditat = rate_guardat, prof_guardada
+        fase_lfo = 0.0
+
+    n = np.arange(16)
+    esperat = 1 - 0.8 * (0.5 + 0.5 * np.sin(2 * np.pi * n / 16))
+    assert not np.allclose(blocs[0], 0), "outdata no s'ha modificat — completa el TODO 2"
+    assert np.allclose(blocs[0], esperat[:8], atol=1e-5), \
+        f"El primer bloc no quadra amb la fórmula.\n  Esperat:  {np.round(esperat[:8], 3)}" \
+        f"\n  Obtingut: {np.round(blocs[0], 3)}"
+    assert not np.allclose(blocs[1], esperat[:8], atol=1e-5), \
+        "El segon bloc és idèntic al primer: l'LFO torna a començar a cada bloc. " \
+        "Actualitzes 'fase_lfo' al final de la callback?"
+    assert np.allclose(blocs[1], esperat[8:], atol=1e-5), \
+        f"El segon bloc no continua on s'acaba el primer.\n  Esperat:  " \
+        f"{np.round(esperat[8:], 3)}\n  Obtingut: {np.round(blocs[1], 3)}"
+    print("✅ Part 1: el trèmolo recorda la fase entre blocs")
+
+
+# ===============================================================
+# PART 2 — Eco amb realimentació
 #
-# Ordre: aplica distorsió primer, eco sobre el resultat.
-# Guarda la distorsió (no l'entrada raw) al buffer de retard.
-# ---------------------------------------------------------------
-print("=== PART 3: Distorsió + Eco combinats ===")
+#   L'eco de exemples.py fa UNA sola repetició, perquè a la cinta
+#   hi guarda l'entrada neta. Un eco "de muntanya" repeteix la
+#   repetició, i la repetició de la repetició...
+#
+#   Canvia UNA cosa respecte a eco_callback: què escrius a la cinta.
+#   Si hi escrius el que SURT (que ja porta l'eco a dins), l'eco
+#   tornarà a passar per la cinta, cada vegada multiplicat per
+#   'feedback'.
+#
+#       sortida = np.clip(mono + feedback * eco, -1.0, 1.0)
+# ===============================================================
 
-drive = 3.0
-threshold = 0.7
-delay_seconds = 0.25
-decay = 0.45
-delay_samples_combo = int(delay_seconds * sample_rate)
-delay_buffer_combo = np.zeros(delay_samples_combo, dtype='float32')
+delay_s = 0.35
+feedback = 0.6
 
-def combo_callback(indata, outdata, frames, time, status):
-    global delay_buffer_combo
+# TODO 3: calcula delay_samples i crea la cinta (np.zeros, dtype='float32')
+delay_samples = None   # <-- substitueix
+delay_buffer = None    # <-- substitueix
+
+
+def eco_fb_callback(indata, outdata, frames, time_info, status):
+    global delay_buffer
     if status:
-        print(status)
+        print("STATUS:", status)
     mono = indata[:, 0]
 
-    # TODO 7: aplica distorsió a mono → resultat en 'dist'
-    dist = None  # <-- np.clip(mono * drive, -threshold, threshold) / threshold
+    # TODO 4: llegeix l'eco, calcula la sortida, avança la cinta,
+    #         escriu-hi el que toca i omple outdata[:, 0]
+    pass  # <-- substitueix aquest 'pass'
 
-    # TODO 8: aplica eco a 'dist' usant delay_buffer_combo → resultat en 'out'
-    # eco = delay_buffer_combo[:frames]
-    # out = dist + eco * decay
-    # delay_buffer_combo = np.roll(delay_buffer_combo, -frames)
-    # delay_buffer_combo[-frames:] = dist  # guardem dist, no mono!
-    out = None  # <-- substitueix
 
-    # TODO 9: assigna a outdata[:, 0] amb clip
+def escolta_part2():
+    global feedback, delay_buffer
+    comprova_part2()
+    delay_buffer = np.zeros(delay_samples, dtype='float32')   # cinta en blanc
+    print("Eco amb realimentació. Pica de mans i escolta les repeticions.")
+    print("Escriu un feedback (0.0 – 1.0) o 'q' per sortir.")
+    print("Prova 0.3, 0.8, 0.95... i 1.0 (compte amb el volum!).\n")
+    with sd.Stream(samplerate=sample_rate,
+                   blocksize=blocksize,
+                   channels=1,
+                   dtype='float32',
+                   latency='low',
+                   callback=eco_fb_callback):
+        while True:
+            try:
+                entrada = input(f"feedback = {feedback:.2f} → ")
+            except KeyboardInterrupt:
+                break
+            entrada = entrada.strip().strip("'\"")
+            if entrada.lower() == 'q':
+                break
+            try:
+                nou = float(entrada)
+            except ValueError:
+                print("  Escriu només un número, per exemple: 0.7")
+                continue
+            if 0.0 <= nou <= 1.0:
+                feedback = nou
+            else:
+                print("  Fora de rang (0.0 – 1.0)")
+    print("Stream tancat.")
+
+
+def comprova_part2():
+    global delay_buffer, feedback
+    assert delay_samples is not None, "Calcula delay_samples (TODO 3)"
+    assert delay_samples == int(delay_s * sample_rate), \
+        f"delay_samples hauria de ser {int(delay_s * sample_rate)}, és {delay_samples}"
+    assert delay_buffer is not None, "Crea la cinta delay_buffer (TODO 3)"
+    assert len(delay_buffer) == delay_samples, \
+        f"La cinta hauria de tenir {delay_samples} mostres, en té {len(delay_buffer)}"
+
+    # Prova amb una cinta minúscula de 4 mostres (retard = 4 mostres)
+    # i blocs de 2: entra un clic (1.0) i després silenci.
+    fb_guardat = feedback
+    feedback = 0.5
+    delay_buffer = np.zeros(4, dtype='float32')
+    entrada = np.zeros(10, dtype='float32')
+    entrada[0] = 1.0
+    sortida = np.zeros(10, dtype='float32')
+    try:
+        for i in range(0, 10, 2):
+            bloc_out = np.zeros((2, 1), dtype='float32')
+            eco_fb_callback(entrada[i:i + 2].reshape(-1, 1), bloc_out, 2, None, None)
+            sortida[i:i + 2] = bloc_out[:, 0]
+    except UnboundLocalError:
+        raise AssertionError("La callback no troba 'delay_buffer'. "
+                             "Hi tens la línia `global delay_buffer`?")
+    finally:
+        feedback = fb_guardat
+        delay_buffer = np.zeros(delay_samples, dtype='float32')
+
+    esperat = np.zeros(10)
+    esperat[0], esperat[4], esperat[8] = 1.0, 0.5, 0.25
+    assert not np.allclose(sortida, 0), "outdata no s'ha modificat — completa el TODO 4"
+    assert np.isclose(sortida[4], 0.5, atol=1e-5), \
+        f"L'eco no surt on toca (4 mostres després del clic). Sortida: {np.round(sortida, 3)}\n" \
+        "  Llegeixes la part MÉS ANTIGA de la cinta?"
+    assert not np.isclose(sortida[8], 0.0, atol=1e-5), \
+        f"Només hi ha UNA repetició. Sortida: {np.round(sortida, 3)}\n" \
+        "  Què estàs escrivint a la cinta?"
+    assert np.allclose(sortida, esperat, atol=1e-5), \
+        f"Esperat:  {esperat}\nObtingut: {np.round(sortida, 3)}"
+    print("✅ Part 2: l'eco es realimenta (1 → 0.5 → 0.25 → ...)")
+
+
+# ===============================================================
+# PART 3 — L'ordre dels efectes: eco → distorsió (LA FAS TU SENCERA)
+#
+#   A exemples.py tens distorsió → eco: l'eco repeteix el so ja
+#   distorsionat. Aquí tens aquella callback copiada (no la toquis)
+#   per poder comparar.
+#
+#   Tu has d'escriure l'ordre INVERS: primer l'eco (d'una sola
+#   repetició, com eco_callback de exemples.py: a la cinta hi va
+#   l'entrada neta) i després tanh(... * drive) de TOT el resultat.
+#
+#   Fes servir la cinta delay_buffer_combo i els paràmetres de sota,
+#   que són els mateixos de la versió de referència.
+# ===============================================================
+
+drive = 8.0
+volum_eco = 0.5
+delay_samples_combo = int(0.25 * sample_rate)
+delay_buffer_combo = np.zeros(delay_samples_combo, dtype='float32')
+
+
+# --- Referència: distorsió → eco (ja feta, no la toquis) ---------
+def disto_eco_callback(indata, outdata, frames, time_info, status):
+    global delay_buffer_combo
+    if status:
+        print("STATUS:", status)
+    mono = indata[:, 0]
+    dist = np.tanh(mono * drive)
+    eco = delay_buffer_combo[:frames]
+    sortida = dist + volum_eco * eco
+    delay_buffer_combo = np.roll(delay_buffer_combo, -frames)
+    delay_buffer_combo[-frames:] = dist
+    outdata[:, 0] = np.clip(sortida, -1.0, 1.0)
+
+
+def escolta_disto_eco(segons=10):
+    global delay_buffer_combo
+    delay_buffer_combo = np.zeros(delay_samples_combo, dtype='float32')
+    print("REFERÈNCIA: distorsió → eco. Parla amb frases curtes.")
+    try:
+        with sd.Stream(samplerate=sample_rate,
+                       blocksize=blocksize,
+                       channels=1,
+                       dtype='float32',
+                       latency='low',
+                       callback=disto_eco_callback):
+            sd.sleep(segons * 1000)
+    except KeyboardInterrupt:
+        pass
+    print("Stream tancat.")
+
+
+# --- La teva: eco → distorsió ------------------------------------
+def eco_disto_callback(indata, outdata, frames, time_info, status):
+    # TODO 5: escriu la callback sencera (global, status, eco, tanh, cinta, outdata)
     pass  # <-- substitueix
 
 
-# Verificació
-_in = np.array([[0.9], [-0.9], [0.1]], dtype='float32')
-_out = np.zeros((3, 1), dtype='float32')
-combo_callback(_in, _out, 3, None, None)
-
-assert not np.all(_out == 0), "outdata no s'ha modificat — implementa els TODOs 7-9"
-assert np.max(np.abs(_out)) <= 1.0 + 1e-5, \
-    f"La sortida hauria d'estar entre -1 i 1, max={np.max(np.abs(_out)):.3f}"
-
-print("✅ Part 3 correcta!")
-print("\nExecutant distorsió + eco durant 10 segons...")
-try:
-    with sd.Stream(samplerate=sample_rate, blocksize=blocksize,
-                   channels=1, dtype='float32', callback=combo_callback):
-        sd.sleep(10000)
-except KeyboardInterrupt:
-    pass
-print("Part 3 feta.\n")
+def escolta_part3(segons=10):
+    global delay_buffer_combo
+    comprova_part3()
+    delay_buffer_combo = np.zeros(delay_samples_combo, dtype='float32')
+    print("LA TEVA: eco → distorsió. Digues les mateixes frases que abans.")
+    try:
+        with sd.Stream(samplerate=sample_rate,
+                       blocksize=blocksize,
+                       channels=1,
+                       dtype='float32',
+                       latency='low',
+                       callback=eco_disto_callback):
+            sd.sleep(segons * 1000)
+    except KeyboardInterrupt:
+        pass
+    print("Stream tancat.")
 
 
-# ---------------------------------------------------------------
-# PART 4 — Reflexió
-# ---------------------------------------------------------------
-print("=== PART 4: Reflexió ===")
+def comprova_part3():
+    global delay_buffer_combo, drive
+    # Cinta de 4 mostres, blocs de 2, drive suau perquè es noti la diferència
+    drive_guardat = drive
+    drive = 2.0
+    delay_buffer_combo = np.zeros(4, dtype='float32')
+    x = np.array([0.1, 0.2, 0.3, -0.4, 0.05, 0.0, 0.0, 0.0], dtype='float32')
+    sortida = np.zeros(8, dtype='float32')
+    try:
+        for i in range(0, 8, 2):
+            bloc_out = np.zeros((2, 1), dtype='float32')
+            eco_disto_callback(x[i:i + 2].reshape(-1, 1), bloc_out, 2, None, None)
+            sortida[i:i + 2] = bloc_out[:, 0]
+    except UnboundLocalError:
+        raise AssertionError("La callback no troba 'delay_buffer_combo'. "
+                             "Hi tens la línia `global delay_buffer_combo`?")
+    finally:
+        drive = drive_guardat
+        delay_buffer_combo = np.zeros(delay_samples_combo, dtype='float32')
 
+    retardat = np.concatenate([np.zeros(4), x[:4]])
+    esperat = np.tanh(2.0 * (x + 0.5 * retardat))
+    ordre_demo = np.clip(np.tanh(2.0 * x) + 0.5 * np.tanh(2.0 * retardat), -1, 1)
+    assert not np.allclose(sortida, 0), "outdata no s'ha modificat — completa el TODO 5"
+    assert not np.allclose(sortida, ordre_demo, atol=1e-5), \
+        "Això és distorsió → eco (l'ordre de la referència). Aquí volem eco → distorsió."
+    assert np.allclose(sortida, esperat, atol=1e-5), \
+        f"Esperat:  {np.round(esperat, 3)}\nObtingut: {np.round(sortida, 3)}\n" \
+        "  Recorda: eco d'una repetició (a la cinta hi va l'entrada neta) i " \
+        "després tanh(… * drive)."
+    print("✅ Part 3: eco → distorsió correcte")
+
+
+# ===============================================================
+# PART 4 — Reflexió (edita les strings)
+# ===============================================================
+
+# TODO 6
 reflexio = {
-    'per_que_buffer_fora_callback':
-        '',  # Per qué el delay_buffer ha d'estar fora del callback
-             # (i no crear-lo dins cada crida)?
+    'brunzit_sinus':
+        '',  # A demo_sinus_sense_memoria() sona un brunzit greu.
+             # D'on surt? Per què té aproximadament aquella freqüència?
 
-    'distorsio_vs_eco_complexitat':
-        '',  # Per qué la distorsió és més simple d'implementar en temps
-             # real que l'eco? Quina diferència fonamental hi ha?
+    'tremolo_sense_fase':
+        '',  # Prova-ho: a la teva tremolo_callback, comenta la línia que
+             # actualitza fase_lfo i escolta amb rate 5 Hz. Què sents?
+             # Per què l'error és fins i tot més greu que al sinus de 440 Hz?
+
+    'feedback':
+        '',  # Què passa amb feedback = 1.0? I què passaria amb 1.2
+             # si no hi hagués el np.clip?
 
     'ordre_efectes':
-        '',  # Has provat distorsió→eco i eco→distorsió?
-             # Sonen diferent? Per qué creus que és?
+        '',  # Compara escolta_disto_eco() amb escolta_part3().
+             # Què sents diferent? Per què passa?
 
     'preview_classes':
-        '',  # Si volguessis tenir 3 ecos simultanis (delays 0.1s, 0.3s, 0.6s)
-             # amb l'enfocament actual (buffer global), com ho faries?
-             # Quin problema veus? Com ho solucionaria una classe?
+        '',  # Si volguessis un trèmolo + tres ecos amb realimentació a la
+             # mateixa callback, quantes globals d'estat necessitaries?
+             # Què et sembla aquesta manera de treballar?
 }
 
-for p, r in reflexio.items():
-    if r:
-        print(f"\n{p}:\n  {r}")
-    else:
-        print(f"\n⚠️  {p}: pendent de respondre")
 
-
-# ---------------------------------------------------------------
-# 🚀 CHALLENGE (opcional) — Stutter en temps real
+# ===============================================================
+# 🚀 CHALLENGE (opcional) — Stutter
 #
-# El stutter repeteix ràpidament un fragment curt del so mentre continua.
-# Pistes:
-#   - Necessites un 'stutter_buffer' que guarda N mostres
-#   - Un flag 'stutter_actiu' (bool global) que actives/desactives
-#   - Quan stutter_actiu=True: el callback reprodueix stutter_buffer
-#     repetidament (en bucle) en lloc de l'entrada normal
-#   - Quan stutter_actiu=False: el callback funciona com a pass-through
-#     i actualitza stutter_buffer amb les mostres actuals
-#   - Activa/desactiva des del programa principal (ex: tecla Enter)
-# ---------------------------------------------------------------
-print("\n🚀 Challenge: Stutter (opcional)")
-print("Implementa el stutter seguint les pistes de l'enunciat.")
-print("Pots afegir el teu codi a continuació.\n")
+#   El stutter "enganxa" un fragment curt de so i el repeteix en
+#   bucle (ta-ta-ta-ta) fins que el deixes anar.
+#
+#   Pistes:
+#   - stutter_buffer: una cinta de N mostres (prova 0.12 s) on, en
+#     mode normal, vas guardant l'entrada (com l'eco).
+#   - stutter_actiu: una global bool. El bucle principal la canvia
+#     cada vegada que prems Enter.
+#   - Mode normal (False): pass-through + anar alimentant la cinta.
+#   - Mode stutter (True): NO toquis la cinta; reprodueix-la en bucle.
+#     Necessitaràs recordar per on vas llegint entre crides (una
+#     altra global!). Per llegir en bucle, l'operador % és el teu amic:
+#         index = (posicio + np.arange(frames)) % N
+# ===============================================================
 
-# El teu codi del stutter aquí
+# El teu codi del stutter aquí (callback + escolta_stutter())
 
-print("\n--- Fi de l'assignment ---")
-print("Puja aquest fitxer (.py) al Classroom un cop completat.")
+
+# ===============================================================
+def comprova_tot():
+    comprova_part1()
+    comprova_part2()
+    comprova_part3()
+    pendents = [p for p, r in reflexio.items() if not r.strip()]
+    if pendents:
+        print("⚠️  Reflexió pendent:", ", ".join(pendents))
+    else:
+        print("✅ Part 4: reflexió completa")
+
+
+print("Funcions definides. Crida-les des de la consola, per exemple:")
+print("  escolta_part1()   escolta_part2()")
+print("  escolta_disto_eco()   escolta_part3()   comprova_tot()")
+print("⚠️  Auriculars posats!")

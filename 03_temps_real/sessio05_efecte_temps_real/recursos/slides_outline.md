@@ -1,119 +1,119 @@
-# Slides — Bloc 3c, Sessió 5
-### Efectes en temps real: eco, distorsió i control amb sliders
-
-> **Instruccions de muntatge:** Mateix estil. Temps estimat: 15-20 min.
+# Slides — Sessió 5
+### Bloc 3c: Efectes amb memòria
 
 ---
 
-### Diapositiva 1 — Portada
-**Bloc 3c — Efectes en temps real**
-*Eco, distorsió i control interactiu*
+### Diapositiva 1 — Efectes amb memòria
+- Bloc 3: offline (S03) → callback (S04) → **avui: efectes que recorden**
+- Avui farem sonar: un oscil·lador, un ring modulator, un eco
+- 🎤 Recordar: auriculars posats durant tota la sessió.
 
 ---
 
-### Diapositiva 2 — On som
-- Sessió 3: efectes offline (tot l'array disponible)
-- Sessió 4: model callback, pass-through, gain
-- Avui: efectes *amb memòria* en temps real — el repte del buffer de retard
-- Diagrama de progressió: offline → pass-through → efectes sense memòria → efectes amb memòria
+### Diapositiva 2 — La callback té amnèsia
+- Cada crida veu **només el bloc actual**: 1024 mostres ≈ 23 ms
+- 43 crides per segon, i cap no sap res de l'anterior
+- La distorsió de la S04 no en patia: cada mostra només depèn d'ella mateixa
+- 🎤 Enllaçar amb la pregunta 3 del warm-up.
 
 ---
 
-### Diapositiva 3 — El problema: el callback no té memòria
-- El callback rep ~23ms de so cada crida
-- Les mostres anteriors ja han marxat — el callback no les "veu"
-- Per a efectes sense memòria (distorsió, gain): cap problema
-- Per a efectes amb memòria (eco, reverb, delay): cal guardar mostres passades
-- Pregunta: *on les guardem?* → fora del callback, en una variable que persisteix
-
----
-
-### Diapositiva 4 — La distorsió: l'efecte sense memòria
+### Diapositiva 3 — Experiment: un sinus bloc a bloc
 ```python
-def distorsio_callback(indata, outdata, frames, time, status):
-    mono = indata[:, 0]
-    clipped = np.clip(mono * drive, -threshold, threshold)
-    outdata[:, 0] = clipped / threshold
+t = np.arange(frames) / sample_rate
+outdata[:, 0] = 0.2 * np.sin(2 * np.pi * 440 * t)
 ```
-- Cada bloc és independent — cap estat extern
-- És el cas ideal per a un callback: simple, ràpid, sense risc
-- Demo en directe: veu distorsionada en temps real
+- Què sentirem? (pregunta 4 del warm-up)
+- 🎤 Fer sonar `demo_sinus_sense_memoria()` ARA, abans d'explicar res. Deixar que identifiquin el brunzit.
 
 ---
 
-### Diapositiva 5 — El buffer de retard: la idea
-- Necessitem "recordar" N mostres passades (N = delay en mostres)
-- Solució: array global de mida N, que el callback llegeix i actualitza cada crida
-- Diagrama: buffer circular amb el cap de lectura i d'escriptura
-- Analogia: una cinta de casset de longitud fixa que es va sobreescrivint
+### Diapositiva 4 — D'on surt el brunzit
+- `t` torna a 0 a cada bloc → el sinus es talla i torna a començar
+- 1024 mostres a 440 Hz = 10.2 cicles: no encaixa → **clic a cada frontera**
+- 43 clics per segon → brunzit de **~43 Hz** (`sample_rate / blocksize`)
+- 🎤 Ensenyar el gràfic de la secció 1 del Colab (càmera lenta).
 
 ---
 
-### Diapositiva 6 — El buffer de retard: en codi
+### Diapositiva 5 — La solució: recordar UN número
 ```python
-delay_buffer = np.zeros(delay_samples)  # viu FORA del callback
+fase = 0.0                                   # fora de la callback
 
-def eco_callback(indata, outdata, frames, time, status):
-    global delay_buffer
-    mono = indata[:, 0]
-    eco = delay_buffer[-frames:]          # llegim el passat
-    out = mono + eco * decay              # sumem
-    delay_buffer = np.roll(delay_buffer, -frames)  # desplacem
-    delay_buffer[-frames:] = mono         # escrivim el present
-    outdata[:, 0] = out
+def sinus_callback(indata, outdata, frames, time_info, status):
+    global fase
+    increment = 2 * np.pi * freq / sample_rate
+    fases = fase + increment * np.arange(frames)
+    outdata[:, 0] = 0.2 * np.sin(fases)
+    fase = (fase + increment * frames) % (2 * np.pi)
 ```
-- `np.roll`: desplaça el buffer com una cinta circular
-- La mida del buffer = delay en mostres = `delay_seconds * sample_rate`
+- La **fase**: on s'ha quedat l'oscil·lador dins el seu cicle
+- Ara la callback **escriu** una global → ara sí cal `global` (pregunta 2 del warm-up)
+- 🎤 `demo_sinus()` i comparar.
 
 ---
 
-### Diapositiva 7 — Visualització del buffer (pas a pas)
-*(Diapositiva animada o sèrie de diagrames)*
-
-- Instant 0: buffer = [0, 0, 0, 0, 0], entrada = [A, B]
-- Crida 1: eco = [0, 0], out = [A, B], buffer → [0, 0, 0, A, B]
-- Crida 2: eco = [A, B], out = [C+A·d, D+B·d], buffer → [0, A, B, C, D]
-- ...el buffer porta la "memòria" del passat
+### Diapositiva 6 — Ring modulator
+- Entrada × portadora (un sinus) → freqüències noves: suma i diferència
+- So metàl·lic, robòtic (Dalek, Stockhausen *Mixtur*)
+- Mateixa memòria que el sinus: la fase
+- 🎤 `demo_ringmod()`: provar 30, 150, 600, 1500 Hz… i 5 Hz (s'assembla a un trèmolo: el pont cap a l'assignment).
 
 ---
 
-### Diapositiva 8 — Control en temps real: sliders a Colab
-- A Thonny: `input()` per canviar paràmetres (ja vist a Sessió 4)
-- A Colab (per a demos visuals sense so real): `ipywidgets`
-- `@widgets.interact(delay_ms=(50,500,10))` → slider automàtic
-- Demo: slider de delay i decay que actualitza un gràfic de l'eco en temps real
-- **Important:** això és visualització, no so real — Colab és al servidor
+### Diapositiva 7 — Eco: ara cal recordar MOLTES mostres
+- El so de fa 0.3 s = 13.230 mostres ≈ 13 blocs enrere
+- Les guardem en una **cinta** (`delay_buffer`)
+```
+  surt ◄── [ més antic · · · · · · · · · · més nou ] ◄── entra
+  (eco)
+```
+- 🎤 Pregunta 6 del warm-up: amb 6 caselles i blocs de 2, quantes crides? Resoldre-ho amb la taula del Colab (secció 2).
 
 ---
 
-### Diapositiva 9 — Combinar efectes en temps real
-- Es pot combinar distorsió + eco dins d'un sol callback
-- Ordre important: distorsió primer, eco sobre el resultat (o a l'inrevés — sona diferent)
-- Regla: el clipping final de seguretat (`np.clip(out, -1.0, 1.0)`) sempre al final
-- Demo: combo en directe
+### Diapositiva 8 — Tres passos a cada crida
+```python
+eco = delay_buffer[:frames]                      # 1. LLEGIR el més antic
+sortida = mono + volum_eco * eco                 # 2. MESCLAR
+delay_buffer = np.roll(delay_buffer, -frames)    # 3. AVANÇAR...
+delay_buffer[-frames:] = mono                    #    ...i ESCRIURE
+```
+- **Retard = mida de la cinta**, exacte, sigui quin sigui el blocksize
+- Retard mínim: un bloc (23 ms)
+- 🎤 `demo_eco()`. Fer notar: UNA sola repetició. Per què? (a la cinta hi va `mono`)
 
 ---
 
-### Diapositiva 10 — El stutter (challenge d'avui)
-- Stutter: repetir ràpidament un fragment curt mentre el so continua
-- Requereix: detectar/triar un fragment, guardar-lo en un buffer separat, reproduir-lo N vegades
-- Més complex que l'eco — però possible amb el que ja sabeu
-- Avui: és el Challenge del mini-repte (opcional)
+### Diapositiva 9 — Una nota d'honestedat
+- `np.roll` mou **totes** les mostres a cada crida (13.230 per escriure'n 1.024)
+- Un **buffer circular** de veritat deixa les dades quietes i mou un índex
+- Per a nosaltres: la cinta és més clara i prou ràpida
+- 🎤 El buffer circular de debò apareix al Bloc 5 (i al challenge del stutter, amb `%`).
 
 ---
 
-### Diapositiva 11 — Preview: per qué les classes al Bloc 5
-- Ara: un buffer global per efecte → difícil de gestionar si en volem molts
-- Si volem dos ecos simultanis: dos buffers globals amb noms diferents
-- Solució natural: una **classe** que porta el seu propi buffer intern
-- Al Bloc 5 construirem oscil·ladors com a classes — l'eco d'avui és la motivació
-- *"Si hagués existit la classe `EcoEffect`, el codi d'avui seria molt més net"*
+### Diapositiva 10 — Paràmetres en directe: qui toca què
+- El **bucle** canvia números: `delay_samples`, `volum_eco`
+- La **callback** és l'única que toca la cinta
+- Entrada de l'usuari: mai ignorar en silenci (`"No t'entenc"`)
+- 🎤 `demo_eco_control()`: provar `r 0.05`, `r 0.5`, `v 0.9`, i una ordre mal escrita.
 
 ---
 
-### Diapositiva 12 — Tancament del Bloc 3
-- Sessions 3-5: el viatge complet del so en temps real
-- Blocking (offline) → callback (temps real) → efectes amb memòria → control interactiu
-- El model de callback és el cor del que farem al projecte final:
-  looper, sintetitzador, drum-replacement — tots basats en callbacks
-- Sessió 6: canviem de domini → MIDI i control musical
+### Diapositiva 11 — L'ordre importa?
+- `demo_disto_eco()`: distorsió → eco
+- I eco → distorsió? Sonarà igual?
+- 🎤 NO respondre: és la Part 3 de l'assignment.
+
+---
+
+### Diapositiva 12 — Comptem globals
+| Efecte | Memòria |
+|---|---|
+| Distorsió | res |
+| Oscil·lador | 1 número |
+| Eco | una cinta |
+- Avui: `fase_sinus`, `fase_ringmod`, `delay_buffer`, `delay_buffer_1`, `delay_buffer_2`…
+- I si en volguéssim 5? I un trèmolo a sobre?
+- 🎤 `demo_dos_ecos()`. Deixar la pregunta oberta → Bloc 5.

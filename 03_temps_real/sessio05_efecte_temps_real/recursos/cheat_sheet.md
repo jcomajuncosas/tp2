@@ -1,169 +1,149 @@
 # Cheat sheet — Sessió 5
-### Bloc 3c: Efectes en temps real — eco, distorsió i control amb sliders
+### Bloc 3c: Efectes amb memòria — la fase d'un oscil·lador i la cinta d'un eco
 
 ---
 
-## 1. El repte dels efectes amb memòria
+## 1. La callback té amnèsia
 
-A la Sessió 3 vam aplicar efectes *offline*: l'eco sumava una còpia retardada de l'array complet. En temps real, **el callback rep un bloc de ~23ms cada vegada** — no té accés a les mostres passades, que ja han marxat.
+Cada vegada que l'stream crida la callback, aquesta només veu **el bloc actual** (1024 mostres ≈ 23 ms). No sap res del bloc anterior. Tot el que s'hagi de recordar d'una crida a la següent ha de viure **fora**, en una variable global.
 
-Per fer eco en temps real necessitem **recordar mostres passades** entre crides al callback. La solució: un **buffer de retard** que viu *fora* del callback (variable global) i que el callback llegeix i actualitza cada crida.
+| Efecte | Què ha de recordar entre crides |
+|---|---|
+| Distorsió, gain (S04) | Res: cada mostra només depèn d'ella mateixa |
+| Oscil·lador (sinus, ring mod, trèmolo) | **Un número**: la fase |
+| Eco | **Moltes mostres**: una cinta de retard |
+
+Regla pràctica: **inicialitza l'estat abans d'obrir l'stream**, i fes que només la callback l'escrigui.
 
 ---
 
-## 2. Buffer de retard — la idea
+## 2. Memòria d'un número: la fase
 
-```
-Crida 1:  [bloc 1] → llegim del buffer (buit) → escrivim bloc 1 al buffer
-Crida 2:  [bloc 2] → llegim bloc 1 del buffer → sumem a bloc 2 → escrivim bloc 2
-Crida 3:  [bloc 3] → llegim bloc 2 del buffer → sumem a bloc 3 → ...
-```
+Si generes un sinus amb `t = np.arange(frames) / sample_rate`, `t` torna a 0 a **cada bloc**: el sinus es talla i torna a començar 43 vegades per segon → **brunzit de ~43 Hz** (`sample_rate / blocksize`).
 
-En codi:
+La solució: guardar **on s'ha quedat** l'oscil·lador (la fase, 0 … 2π) i continuar des d'allà.
 
 ```python
-import numpy as np
-import sounddevice as sd
+freq = 440.0
+fase = 0.0                      # ← la memòria, FORA de la callback
 
-sample_rate = 44100
-delay_seconds = 0.3
-delay_samples = int(delay_seconds * sample_rate)  # 13230 mostres
-
-# Buffer global — viu entre crides al callback
-delay_buffer = np.zeros(delay_samples, dtype='float32')
-
-def eco_callback(indata, outdata, frames, time, status):
-    global delay_buffer
-    mono = indata[:, 0]  # agafem el canal mono
-
-    # Llegim les mostres que van entrar fa 'delay_seconds' segons
-    eco = delay_buffer[:frames]   # les PRIMERES 'frames' mostres (les mes antigues)
-
-    # Sortida = entrada + eco atenuat
-    out = mono + eco * decay
-
-    # Actualitzem el buffer: desplacem i afegim les mostres noves
-    delay_buffer = np.roll(delay_buffer, -frames)
-    delay_buffer[-frames:] = mono
-
-    outdata[:, 0] = out
+def sinus_callback(indata, outdata, frames, time_info, status):
+    global fase                 # l'escrivim → cal `global`
+    increment = 2 * np.pi * freq / sample_rate          # avanç per mostra
+    fases = fase + increment * np.arange(frames)        # fases d'aquest bloc
+    outdata[:, 0] = 0.2 * np.sin(fases)
+    fase = (fase + increment * frames) % (2 * np.pi)    # on comença el següent
 ```
 
-**Per qué `np.roll`?** Desplaça el buffer circular: les mostres més antigues surten per un extrem i les noves entren per l'altre. És la implementació més clara (no la més eficient, però suficient per a blocs curts).
+El `% (2 * np.pi)` només manté el número petit: sumar voltes senceres no canvia el sinus.
 
 ---
 
-## 3. Paràmetres de l'eco en temps real
+## 3. Ring modulator
+
+Multiplica l'entrada per un sinus (la **portadora**):
 
 ```python
-delay_seconds = 0.3   # temps de retard (segons)
-decay = 0.5           # atenuació de l'eco (0=silenci, 1=igual de fort)
+portadora = np.sin(fase + increment * np.arange(frames))
+outdata[:, 0] = indata[:, 0] * portadora
 ```
 
-Ambdós es poden canviar en temps real (des del programa principal o des d'un slider) — el callback els llegeix a cada crida.
+- Portadora de 100–1000 Hz → so metàl·lic, robòtic: apareixen freqüències noves (suma i diferència de l'entrada i la portadora).
+- Portadora molt lenta (< 20 Hz) → el volum puja i baixa (i canvia de signe): s'assembla a un trèmolo.
 
----
-
-## 4. Control amb ipywidgets (Colab)
-
-A Colab, podem usar sliders per controlar paràmetres **sense** que el codi de temps real s'executi al servidor. El slider modifica una variable Python que el codi local (Thonny) llegeix via un fitxer o socket — o simplement l'usem per a demos conceptuals a Colab (el slider canvia una variable i veiem el resultat en un gràfic, sense so real).
-
-Per a **Thonny**, el control interactiu és via `input()` (com a la Sessió 4) o via teclat (amb `keyboard` o `pynput`).
-
-Per a **demos visuals a Colab** (sense so real):
+**Trèmolo** (el faràs a l'assignment): el mateix oscil·lador, lent, però com a guany que no canvia de signe:
 
 ```python
-import ipywidgets as widgets
-from IPython.display import display
-import numpy as np
-import matplotlib.pyplot as plt
-
-@widgets.interact(delay_ms=(50, 500, 10), decay=(0.0, 1.0, 0.05))
-def visualitza_eco(delay_ms=300, decay=0.5):
-    sr = 44100
-    t = np.linspace(0, 1, sr, endpoint=False)
-    signal = np.zeros(sr)
-    signal[sr//4] = 1.0  # impuls al 25%
-    delay_samples = int(delay_ms / 1000 * sr)
-    eco = np.zeros(sr)
-    eco[sr//4 + delay_samples] = decay
-    plt.figure(figsize=(10, 3))
-    plt.plot(t, signal + eco)
-    plt.title(f"Eco: delay={delay_ms}ms, decay={decay}")
-    plt.show()
+lfo   = 0.5 + 0.5 * np.sin(fases)      # 0 … 1
+guany = 1 - profunditat * lfo          # 1 … (1 - profunditat)
 ```
 
 ---
 
-## 5. Distorsió en temps real
+## 4. Memòria de moltes mostres: la cinta del retard
 
-La distorsió és un dels efectes més simples en temps real perquè **no té memòria** — cada bloc és independent:
+Per fer un eco hem de recordar el so de fa `delay_s` segons. El guardem en una **cinta** de `delay_samples` mostres. A cada crida, tres passos:
 
-```python
-drive = 4.0
-threshold = 0.7
-
-def distorsio_callback(indata, outdata, frames, time, status):
-    mono = indata[:, 0]
-    clipped = np.clip(mono * drive, -threshold, threshold)
-    outdata[:, 0] = clipped / threshold  # normalitzem
+```
+              ┌──────────── cinta (delay_samples mostres) ────────────┐
+  surt ◄──  [ més antic  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  més nou ]  ◄── entra
+  (eco)
 ```
 
-Cap buffer, cap estat extern — és el cas ideal per a un callback.
-
----
-
-## 6. Combinar efectes en temps real
-
-Es poden combinar efectes dins d'un sol callback:
-
 ```python
-def combo_callback(indata, outdata, frames, time, status):
+delay_s = 0.3
+volum_eco = 0.6
+delay_samples = int(delay_s * sample_rate)                # 13230 mostres
+delay_buffer = np.zeros(delay_samples, dtype='float32')   # cinta en blanc
+
+def eco_callback(indata, outdata, frames, time_info, status):
     global delay_buffer
     mono = indata[:, 0]
 
-    # 1. Distorsió
-    dist = np.clip(mono * drive, -threshold, threshold) / threshold
+    eco = delay_buffer[:frames]                      # 1. LLEGIR l'extrem més antic
+    sortida = mono + volum_eco * eco                 # 2. MESCLAR
 
-    # 2. Eco (sobre la distorsió)
-    eco = delay_buffer[:frames]
-    out = dist + eco * decay
-    delay_buffer = np.roll(delay_buffer, -frames)
-    delay_buffer[-frames:] = dist  # guardem la distorsió al buffer, no el raw
+    delay_buffer = np.roll(delay_buffer, -frames)    # 3. AVANÇAR la cinta...
+    delay_buffer[-frames:] = mono                    #    ...i ESCRIURE el bloc nou
 
-    outdata[:, 0] = np.clip(out, -1.0, 1.0)  # clip final de seguretat
+    outdata[:, 0] = np.clip(sortida, -1.0, 1.0)
 ```
+
+- **Retard = mida de la cinta**, en mostres. Exacte, sigui quin sigui el blocksize.
+- ⚠️ Llegeix `[:frames]` (el més antic). Si llegeixes `[-frames:]` obtens el bloc anterior: retard d'un sol bloc (23 ms), no de 0.3 s.
+- **Retard mínim = un bloc** (1024 / 44100 ≈ 23 ms): la cinta ha de tenir com a mínim `frames` mostres per poder-ne llegir `frames`.
+- Si a la cinta hi escrius `mono`, l'eco fa **una sola repetició**. Què passaria si hi escrivissis `sortida`? → assignment.
+
+**Nota d'honestedat:** això no és un *buffer circular* de veritat. `np.roll` mou **totes** les mostres a cada crida. Un buffer circular deixa les dades quietes i mou un **índex**. La cinta és més clara i prou ràpida per a nosaltres.
 
 ---
 
-## 7. Per qué les classes seran millors (preview Bloc 5)
-
-El buffer global funciona, però té un problema clar: si volem **dos ecos** simultanis (delays diferents), necessitem dos buffers globals amb noms diferents. Si volem encapsular tot l'estat d'un efecte (buffer + paràmetres), una **classe** és la solució natural:
+## 5. Canviar paràmetres en directe
 
 ```python
-class EcoEffect:
-    def __init__(self, delay_seconds, decay, sample_rate=44100):
-        self.delay_samples = int(delay_seconds * sample_rate)
-        self.decay = decay
-        self.buffer = np.zeros(self.delay_samples, dtype='float32')
-
-    def process(self, mono_block):
-        frames = len(mono_block)
-        eco = self.buffer[-frames:]
-        out = mono_block + eco * self.decay
-        self.buffer = np.roll(self.buffer, -frames)
-        self.buffer[-frames:] = mono_block
-        return out
+with sd.Stream(..., callback=eco_control_callback):
+    while True:
+        entrada = input("> ").strip().lower().replace('=', ' ')
+        if entrada == 'q':
+            break
+        parts = entrada.split()
+        if len(parts) != 2 or parts[0] not in ('r', 'v'):
+            print("No t'entenc: 'r 0.5', 'v 0.7' o 'q'")    # mai ignorar en silenci
+            continue
+        ...
 ```
 
-Al **Bloc 5** construirem oscil·ladors i sintetitzadors com a classes seguint exactament aquest patró. L'eco de Sessió 5 és la motivació per entendre per qué les classes existeixen.
+**Repartiment de feines:** el bucle només canvia **números** (`delay_samples`, `volum_eco`). La callback és **l'única** que toca la cinta (si el retard ha canviat, en fa una de nova).
 
 ---
 
-## 8. Regles d'or del callback (resum)
+## 6. Encadenar efectes: l'ordre importa
 
-1. **Cap I/O** dins el callback (ni `sf.read`, ni `input`, ni `print` habitual)
-2. **Cap càlcul pesat** — el mínim per processar el bloc
-3. **Variables compartides simples** (float, int): variable global (funciona, és lleig)
-4. **Arrays compartits** (buffer de retard): variable global + `np.roll` o índex circular
-5. **En producció**: `queue.Queue` per a paràmetres, classes per a l'estat
+```python
+# distorsió → eco: l'eco repeteix el so JA distorsionat
+dist = np.tanh(mono * drive)
+eco = delay_buffer[:frames]
+sortida = dist + volum_eco * eco
+...
+delay_buffer[-frames:] = dist          # a la cinta hi va el que vols repetir
+```
+
+L'ordre invers (eco → distorsió) no sona igual. Per què? → assignment.
+
+---
+
+## 7. Comptem globals (pregunta per al Bloc 5)
+
+Avui: `fase_sinus`, `fase_ringmod`, `delay_buffer`, `delay_buffer_1`, `delay_buffer_2`... més tots els paràmetres de cada efecte.
+
+**I si volguéssim 5 ecos i un trèmolo, cadascun amb els seus paràmetres?** Ho resoldrem al Bloc 5.
+
+---
+
+## 8. Regles d'or de la callback (actualitzades)
+
+1. **Cap I/O** dins la callback (ni `input`, ni fitxers). Només el `print` de `status`.
+2. **Cap càlcul pesat**: el mínim per processar el bloc.
+3. **L'estat viu fora** (global) i s'**inicialitza abans** d'obrir l'stream.
+4. **Només la callback escriu el seu estat** (fase, cinta). El bucle principal només canvia paràmetres.
+5. Signatura: `callback(indata, outdata, frames, time_info, status)`.

@@ -45,7 +45,7 @@ L'assignment d'aquesta sessió és un fitxer `.py` per a Thonny, no un notebook 
 ## Fitxers d'aquesta carpeta
 
 - `guia.md` — aquesta guia
-- `exemples.py` — demo guiada per a Thonny (5 demos progressives)
+- `recursos/exemples.py` — demo guiada per a Thonny (5 demos progressives)
 - `assignment.py` — mini-repte per a Thonny (pass-through + gain + observacions blocksize + reflexió)
 - `recursos/cheat_sheet.md` — mapa mental complet blocking vs. callback + taula de referència
 - `recursos/warmup_quiz.md` — 7 preguntes per a Google Forms
