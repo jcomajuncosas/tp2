@@ -3,15 +3,26 @@
 
 ---
 
+## 0. Colab o Thonny?
+
+| Si treballes amb... | Eina | Per què |
+|---|---|---|
+| **Fitxers** `.mid` (llegir, analitzar, crear) | **Colab** | No hi ha rellotge ni hardware; podem dibuixar i escoltar al moment |
+| **Ports** MIDI (teclat, DAW, sintetitzador) | **Thonny** | Els ports són dispositius del teu ordinador, com la targeta de so |
+
+És el mateix criteri que fem servir des de la Sessió 1: offline → Colab, temps real → Thonny.
+
+---
+
 ## 1. Què és MIDI?
 
-MIDI (Musical Instrument Digital Interface, 1983) **no és so** — és un protocol de missatges que descriuen accions musicals:
+MIDI (Musical Instrument Digital Interface, 1983) **no és so**: és un protocol de missatges que descriuen accions musicals.
 
 - "Toca la nota 60 amb velocity 80 al canal 1"
 - "Atura la nota 60 al canal 1"
 - "Canvia el tempo a 120 bpm"
 
-Un fitxer `.mid` és una seqüència d'aquests missatges amb timestamps. El so el genera qui rep els missatges (un sintetitzador, un DAW, el sistema operatiu...).
+Un fitxer `.mid` és una seqüència d'aquests missatges amb el seu temps. El so el genera qui els rep: un sintetitzador, un DAW, el sistema operatiu...
 
 **Contrast amb WAV:** un `.wav` és el so ja generat (mostres d'àudio). Un `.mid` és la partitura (instruccions). El mateix `.mid` pot sonar molt diferent segons qui l'interpreta.
 
@@ -21,31 +32,30 @@ Un fitxer `.mid` és una seqüència d'aquests missatges amb timestamps. El so e
 
 | Concepte | Rang | Notes |
 |---|---|---|
-| Nota (note number) | 0–127 | 60 = Do central (C4), +1 = semitò |
+| Nota (note number) | 0–127 | 60 = Do central (C4), +1 = un semitò |
 | Velocity | 0–127 | 0 = silenci, 127 = màxim |
-| Canal | 0–15 | 16 canals independents; canal 9 = percussió |
+| Canal | 0–15 | 16 canals independents; canal 9 = percussió (General MIDI) |
 | Tempo | microsegons/beat | `mido.bpm2tempo(120)` = 500000 |
 | Ticks | — | Subdivisió interna del temps; `ticks_per_beat` defineix la resolució |
 
-**Fórmula nota ↔ nom:**
+**Nota ↔ nom:**
 ```python
-notes = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa',
-         'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
-nom = notes[midi_num % 12]
+noms = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa',
+        'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
+nom = noms[midi_num % 12]
 octava = midi_num // 12 - 1
 ```
 
-**Connexió amb TP1:** a TP1 usàveu `piano(60, 0.7, 0.25)` — nota, velocity (0–1), durada. MIDI fa el mateix però amb velocity 0–127 i el temps mesurat en ticks, no en segons.
+**Connexió amb TP1:** a TP1 fèieu `piano(60, 0.7, 0.25)`: nota, velocity (0–1), durada. MIDI diu el mateix, però amb velocity 0–127 i el temps mesurat en ticks, no en segons.
 
 ---
 
-## 3. `mido`: llegir un fitxer MIDI
+## 3. Llegir un fitxer
 
 ```python
 import mido
 
 mid = mido.MidiFile('example_scale.mid')
-
 print(f"Tracks: {len(mid.tracks)}")
 print(f"Ticks per beat: {mid.ticks_per_beat}")
 print(f"Durada total: {mid.length:.2f} s")
@@ -58,106 +68,136 @@ for i, track in enumerate(mid.tracks):
 
 ---
 
-## 4. Tipus de missatges MIDI principals
+## 4. Tipus de missatges principals
 
 ```python
-# note_on: comença una nota
-msg = mido.Message('note_on', channel=0, note=60, velocity=80, time=0)
+mido.Message('note_on',  channel=0, note=60, velocity=80, time=0)    # obre una nota
+mido.Message('note_off', channel=0, note=60, velocity=0,  time=480)  # la tanca
+# Atenció: molts fitxers tanquen les notes amb note_on de velocity 0
 
-# note_off: atura una nota (o note_on amb velocity=0)
-msg = mido.Message('note_off', channel=0, note=60, velocity=0, time=480)
+mido.Message('control_change', channel=0, control=7, value=100, time=0)  # potenciòmetres, pedals
+mido.Message('program_change', channel=0, program=40, time=0)            # instrument GM (40 = violí)
 
-# control_change: potenciòmetres, pedals, etc.
-msg = mido.Message('control_change', channel=0, control=7, value=100, time=0)
-
-# program_change: canvia l'instrument (General MIDI)
-msg = mido.Message('program_change', channel=0, program=40, time=0)  # violí
-
-# MetaMessage: informació del fitxer (no sona)
-tempo_msg = mido.MetaMessage('set_tempo', tempo=500000, time=0)  # 120 bpm
+mido.MetaMessage('set_tempo', tempo=500000, time=0)  # informació del fitxer: no sona
 ```
-
-**El camp `time`:** en un fitxer MIDI, `time` és el **delta time** — ticks *des del missatge anterior*, no des de l'inici. `time=0` vol dir "al mateix instant que l'anterior".
 
 ---
 
-## 5. `mido`: crear un fitxer MIDI
+## 5. Delta time: la idea clau
+
+`msg.time` = ticks **des del missatge anterior** (no des de l'inici).
+
+| # | missatge | nota | `time` | tick absolut |
+|---|---|---|---|---|
+| 1 | note_on | Do4 | 0 | 0 |
+| 2 | note_on | Mi4 | **0** | 0 ← acord |
+| 3 | note_off | Do4 | 480 | 480 |
+| 4 | note_off | Mi4 | 0 | 480 |
+| 5 | note_on | Sol4 | **240** | 720 ← silenci abans |
+| 6 | note_off | Sol4 | 240 | 960 |
+
+- **Acord** → diversos `note_on` seguits amb `time=0`
+- **Silenci** → el temps va al `note_on` que ve després
+- **Durada** → el temps va al missatge que tanca la nota
+
+Per saber el tick absolut, **acumula**:
+```python
+tick = 0
+for msg in track:
+    tick += msg.time      # a TOTS els missatges, també els meta
+```
+
+**Errors típics:**
+
+| Codi | Resultat |
+|---|---|
+| `note_on time=480` + `note_off time=480` | silenci d'una negra abans de cada nota |
+| `note_on time=480` + `note_off time=0` | cada nota dura **0**: el fitxer no sona |
+
+---
+
+## 6. Crear un fitxer
 
 ```python
-import mido
-
 mid = mido.MidiFile(ticks_per_beat=480)
-tempo = mido.bpm2tempo(120)  # 500000 µs/beat
 
-# Track de metadades
 meta = mido.MidiTrack()
-meta.append(mido.MetaMessage('set_tempo', tempo=tempo, time=0))
+meta.append(mido.MetaMessage('set_tempo', tempo=mido.bpm2tempo(120), time=0))
 mid.tracks.append(meta)
 
-# Track de notes
 track = mido.MidiTrack()
-quarter = 480  # 1 negra = ticks_per_beat
-
-for note in [60, 64, 67, 72]:  # acord Do major arpegiado
-    track.append(mido.Message('note_on',  channel=0, note=note, velocity=80, time=0))
-    track.append(mido.Message('note_off', channel=0, note=note, velocity=0,  time=quarter))
-
+for note in [60, 64, 67, 72]:                 # arpegi de Do major, negres
+    track.append(mido.Message('note_on',  note=note, velocity=80, time=0))
+    track.append(mido.Message('note_off', note=note, velocity=0,  time=480))
+track.append(mido.MetaMessage('end_of_track', time=0))
 mid.tracks.append(track)
 mid.save('el_meu_midi.mid')
 ```
 
 ---
 
-## 6. Ticks ↔ segons
+## 7. Ticks ↔ segons
 
 ```python
-# De ticks a segons
-tempo = 500000  # µs per beat (120 bpm)
-ticks_per_beat = 480
+segons = mido.tick2second(480, 480, 500000)   # ticks, ticks_per_beat, tempo → 0.5
+ticks  = mido.second2tick(0.5, 480, 500000)   # → 480.0
+# a mà: segons = ticks * tempo / ticks_per_beat / 1_000_000
+```
 
-def ticks_to_seconds(ticks, tempo, ticks_per_beat):
-    return ticks * tempo / ticks_per_beat / 1_000_000
-
-# Exemple: 480 ticks (1 negra) a 120bpm = 0.5s
-print(ticks_to_seconds(480, 500000, 480))  # 0.5
-
-# mido té una funció per iterar amb temps absolut en segons:
-for msg in mid:  # itera el fitxer sencer (no track a track)
-    print(msg.time, msg)  # msg.time és en SEGONS aquí
+Si iteres **el fitxer sencer** (no un track), `mido` barreja tots els tracks i dona `msg.time` en **segons**. Però continua sent un **delta**:
+```python
+ara = 0.0
+for msg in mid:
+    ara += msg.time       # ara sí: segons des de l'inici
 ```
 
 ---
 
-## 7. MIDI en temps real amb `mido` (demo)
+## 8. MIDI en temps real (Thonny)
+
+**Cal instal·lar `python-rtmidi`** (Thonny → Tools → Manage packages). Sense aquest paquet, `mido` no veu cap port.
 
 ```python
-import mido
-
-# Llistar ports disponibles
-print("Inputs:", mido.get_input_names())
-print("Outputs:", mido.get_output_names())
-
-# Rebre missatges d'un teclat MIDI
-with mido.open_input() as port:
-    for msg in port:
-        print(msg)
-        if msg.type == 'note_on' and msg.velocity > 0:
-            print(f"Nota: {msg.note}, Velocity: {msg.velocity}")
+mido.get_input_names()    # entrades (teclats...)
+mido.get_output_names()   # sortides (synths, DAW...)
 ```
 
-**Nota macOS:** per enviar MIDI a un DAW cal crear un port virtual IAC (Audio MIDI Setup → MIDI Studio → IAC Driver). A Windows: LoopMIDI. Veurem-ho a classe si el temps ho permet.
+Tres maneres de rebre missatges:
+```python
+# 1) Bloquejant: el programa s'espera a cada missatge
+port = mido.open_input()
+for msg in port:
+    print(msg)
+
+# 2) Sense bloquejar: mires què ha arribat i continues (com block=False a TP1)
+for msg in port.iter_pending():
+    print(msg)
+
+# 3) Callback: mido crida la teva funció a cada missatge, des d'un altre fil
+def quan_arriba(msg):
+    print(msg)
+port = mido.open_input(callback=quan_arriba)
+```
+
+| | Callback d'**àudio** (S04) | Callback **MIDI** |
+|---|---|---|
+| Qui el crida | El rellotge de la targeta, regularment | Cada esdeveniment, quan arriba |
+| Què ha de fer | Omplir un buffer abans d'un deadline | Reaccionar (anotar estat) |
+| Si va lent | Dropout | Retard i jitter |
+
+**Enviar:** `port = mido.open_output()` i `port.send(msg)`; en acabar, `port.close()`. El temps el portes tu (`time.sleep`) o `mid.play()`, que espera entre missatges però **no fa so**: cal enviar-los a un port.
+
+**On sona?** Windows: port "Microsoft GS Wavetable Synth". macOS: activa el IAC Driver (Audio MIDI Setup → MIDI Studio) i escolta'l amb GarageBand o un DAW.
 
 ---
 
-## 8. Connexió amb TP1 i preview
+## 9. Connexió amb TP1 i preview
 
-| TP1 (`musica`) | TP2 (`mido`) |
+| TP1 | TP2 (`mido`) |
 |---|---|
-| `piano(60, 0.7, 0.25)` | `note_on(note=60, velocity=89, time=0)` + `note_off(time=quarter)` |
+| `piano(60, 0.7, 0.25)` | `note_on(note=60, velocity=89, time=0)` + `note_off(time=...)` |
 | `for note in pattern:` | `for note in pattern: track.append(...)` |
-| `wait(0.5)` | `time=ticks` (delta time entre missatges) |
-| `while True:` loop infinit | `for msg in port:` loop de missatges en temps real |
+| `wait(0.5)` | el `time` (delta) del missatge següent |
+| `block=False` | `port.iter_pending()` |
 
-La lògica és idèntica — canvia el protocol i la granularitat del temps.
-
-**Sessió 7:** amb `pretty_midi` podrem fer tot això expressant les durades directament en segons (sense gestionar ticks manualment), i generarem seqüències musicals molt més ràpidament.
+**Sessió 7:** amb `pretty_midi` escriurem les notes directament amb inici i final en segons, sense gestionar ticks a mà.

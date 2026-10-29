@@ -51,9 +51,9 @@ Els patches **no** donen la funció que aparella `note_on`/`note_off` (ara és l
 
 ## Challenges
 
-Tots segueixen el patró **deltes → absolut → transforma → deltes**. El challenge 0 (`a_track`, el camí invers) desbloqueja la resta. Cadascun amaga un descobriment, verificat a `_solucions/S06_challenges_solucio.py`:
+Tots segueixen el patró **deltes → absolut → transforma → deltes**. El challenge 0 (`a_track`, el camí invers) desbloqueja la resta. Cadascun amaga un descobriment, verificat a `_solucions/solucio.ipynb`:
 
-1. **Eco MIDI** (pont amb el delay de la S05): amb `feedback > 1` no explota, satura a 127. Amb un retard més curt que la nota, la `a_temps_absolut` de la Part 3 recupera 49 de 64 notes i `pretty_midi` les 64: MIDI no diu quin `note_off` tanca quin `note_on`.
+1. **Eco MIDI** (pont amb el delay de la S05): amb `feedback > 1` no explota, satura a 127. Amb un retard més curt que la nota, la Part 3 i `pretty_midi` veuen 64 notes però amb durades diferents (la Part 3 manté 0,5 s; `pretty_midi` talla els ecos a 0,125 s). Una Part 3 feta amb diccionari en veu 49. MIDI no diu quin `note_off` tanca quin `note_on`.
 2. **Retrògrad**: `track[::-1]` fa que només sonin 8 de 16 notes, amb el ritme desplaçat. Cal passar pel temps absolut.
 3. **Phasing (Reich)**: amb 480 vs. 470 ticks, la veu B cau a temps una nota per davant cada 4 repeticions (48 notes). El patró sencer no torna a coincidir fins a 48 repeticions.
 4. **Humanitzador**: on és la frontera entre "humà" i "begut"?
@@ -76,7 +76,7 @@ Tots segueixen el patró **deltes → absolut → transforma → deltes**. El ch
 - `recursos/slides_outline.md` — 15 diapositives
 - `recursos/patches_bloc4a.ipynb` — demo Colab
 - `recursos/midi/example_scale.mid` — fitxer d'exemple (escala de Do major + baix, 3 tracks)
-- `_solucions/solucio.py`, `_solucions/S06_challenges_solucio.py` — solucions (no es publiquen)
+- `_solucions/solucio.ipynb` — el notebook del workshop resolt, amb els challenges al final (no es publica; s'obre a Colab com el de l'alumne)
 
 ## Pendent / a revisar
 
