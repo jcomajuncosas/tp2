@@ -44,7 +44,8 @@ Els patches **no** donen la funció que aparella `note_on`/`note_off` (ara és l
 | Part | Què fan | Per què no és copiar |
 |---|---|---|
 | 1–2 | `compta_notes`, `rang_notes` | Escalfament. L'autotest inclou un `note_on` de velocity 0 |
-| 3 ⭐ | `a_temps_absolut` | Han d'aparellar obertures i tancaments ells mateixos. El piano roll es dibuixa amb la **seva** llista |
+| 3a ⭐ | `ticks_absoluts` | La taula en paper passada a codi: dues línies guiades (acumular el delta, guardar la parella). La cel·la de prova imprimeix la taula de la pissarra |
+| 3b ⭐ | `a_temps_absolut` (esquelet) | L'aparellament ja està escrit; completen 5 línies guiades: quan s'obre una nota, els dos tipus de tancament, ticks → segons. El piano roll es dibuixa amb la **seva** llista |
 | 4 | Seqüència pròpia amb **silenci + acord** | El patró dels patches no ho resol. L'autotest comprova l'acord, el silenci i les notes de durada 0 |
 | 5 | `transposa` | Track nou (no modificar l'original), també els tancaments, `ValueError` fora de rang |
 | 🎼 | Duo (frase + frase transposada) | Consolidació escrita per l'alumne, sense autotest |
@@ -69,7 +70,7 @@ Tots segueixen el patró **deltes → absolut → transforma → deltes**. El ch
 ## Fitxers d'aquesta carpeta
 
 - `guia.md` — aquesta guia
-- `exemples.py` — demo de MIDI en temps real (Thonny)
+- `recursos/exemples.py` — demo de MIDI en temps real (Thonny)
 - `notebook.ipynb` — workshop (Colab)
 - `recursos/cheat_sheet.md`
 - `recursos/warmup_quiz.md` — 7 preguntes per a Google Forms (sense canvis)
@@ -80,8 +81,7 @@ Tots segueixen el patró **deltes → absolut → transforma → deltes**. El ch
 
 ## Pendent / a revisar
 
-- [ ] **Comprovar l'autotest 1 i 2 contra l'`example_scale.mid` real** (16 i 8 notes, melodia 60–72, baix per sota de 60). S'ha validat amb una reconstrucció coherent amb aquesta guia, no amb l'original.
-- [ ] Publicar `recursos/midi/example_scale.mid` al repo públic abans de la classe (ara la URL de descàrrega dona 404)
+- [ ] Comprovar que `recursos/midi/example_scale.mid` és al repo públic després del sync
 - [ ] Muntar Google Form, Google Slides (diapositives 8–9: preparar fotocòpia amb quadrícula) i el cheat sheet com a Google Doc
 - [ ] Provar els notebooks a Colab: el render amb fluidsynth s'ha validat al contenidor, no a Colab
 - [ ] Provar `exemples.py` amb un teclat i un port reals a l'aula
