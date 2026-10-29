@@ -136,13 +136,17 @@ mid.save('el_meu.mid')
 ---
 
 ### Diapositiva 14 — MIDI en temps real (demo a Thonny)
-- Cal `python-rtmidi` (Thonny → Tools → Manage packages)
-- Tres maneres de rebre: bloquejant (`for msg in port`), sense bloquejar (`iter_pending`, com el `block=False` de TP1) i **callback**
+- Dues llibreries, dues feines: `rtmidi2` obre els ports i mou els **bytes**; `mido` els tradueix a missatges
+- El que viatja pel cable: `[144, 60, 100]` → `mido.Message.from_bytes(...)` → `note_on note=60 velocity=100`
+- Dues maneres de rebre:
+  - **preguntant** (`get_message()`): el programa mira si ha arribat res, com el `block=False` de TP1
+  - **callback**: el sistema crida la teva funció quan arriba cada missatge, des d'un altre fil
 - **Callback MIDI vs. callback d'àudio (S04):**
   - àudio → el crida el rellotge, regularment, i ha d'omplir un buffer abans d'un deadline
   - MIDI → el crida cada esdeveniment, quan arriba, i només ha de reaccionar
 - Arquitectura d'un sintetitzador: el callback MIDI escriu l'estat (nota, gate) i el callback d'àudio el llegeix
-- On sona: Windows → GS Wavetable Synth; macOS → IAC Driver + GarageBand/DAW
+- Sense teclat: el IAC Driver de macOS és un cable virtual (el que surt torna a entrar) → `prova_iac()`
+- Els ports s'obren pel **número**: el nom canvia amb l'idioma del sistema
 - Preview del projecte final: els instruments reben MIDI en temps real
 
 ---

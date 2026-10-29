@@ -155,28 +155,29 @@ for msg in mid:
 
 ## 8. MIDI en temps real (Thonny)
 
-**Cal instal·lar `python-rtmidi`** (Thonny → Tools → Manage packages). Sense aquest paquet, `mido` no veu cap port.
+Dues llibreries, cadascuna per a una feina (Thonny → Tools → Manage packages → `rtmidi2`):
+- **`rtmidi2`** obre els ports i rep/envia **bytes**: `[144, 60, 100]`
+- **`mido`** els tradueix: `mido.Message.from_bytes([144, 60, 100])` → `note_on note=60 velocity=100`
 
 ```python
-mido.get_input_names()    # entrades (teclats...)
-mido.get_output_names()   # sortides (synths, DAW...)
+import rtmidi2, mido
+
+entrada = rtmidi2.MidiIn()
+print(entrada.ports)          # llista de ports: s'obren pel NÚMERO
+entrada.open_port(0)          # (el nom canvia segons l'idioma del sistema)
 ```
 
-Tres maneres de rebre missatges:
+Dues maneres de rebre:
 ```python
-# 1) Bloquejant: el programa s'espera a cada missatge
-port = mido.open_input()
-for msg in port:
-    print(msg)
+# 1) Preguntant: el programa mira si ha arribat res (com block=False a TP1)
+dades = entrada.get_message()          # bytes, o None si no hi ha res
+if dades is not None:
+    print(mido.Message.from_bytes(dades))
 
-# 2) Sense bloquejar: mires què ha arribat i continues (com block=False a TP1)
-for msg in port.iter_pending():
-    print(msg)
-
-# 3) Callback: mido crida la teva funció a cada missatge, des d'un altre fil
-def quan_arriba(msg):
-    print(msg)
-port = mido.open_input(callback=quan_arriba)
+# 2) Callback: el sistema crida la teva funció a cada missatge, des d'un altre fil
+def quan_arriba(dades, timestamp):
+    print(mido.Message.from_bytes(dades))
+entrada.callback = quan_arriba
 ```
 
 | | Callback d'**àudio** (S04) | Callback **MIDI** |
@@ -185,9 +186,16 @@ port = mido.open_input(callback=quan_arriba)
 | Què ha de fer | Omplir un buffer abans d'un deadline | Reaccionar (anotar estat) |
 | Si va lent | Dropout | Retard i jitter |
 
-**Enviar:** `port = mido.open_output()` i `port.send(msg)`; en acabar, `port.close()`. El temps el portes tu (`time.sleep`) o `mid.play()`, que espera entre missatges però **no fa so**: cal enviar-los a un port.
+**Enviar:**
+```python
+sortida = rtmidi2.MidiOut()
+sortida.open_port(0)
+sortida.send_message(mido.Message('note_on', note=60, velocity=80).bytes())
+```
+`mid.play()` espera entre els missatges d'un fitxer però **no fa so**: cal enviar-los a un port.
 
-**On sona?** Windows: port "Microsoft GS Wavetable Synth". macOS: activa el IAC Driver (Audio MIDI Setup → MIDI Studio) i escolta'l amb GarageBand o un DAW.
+**Sense teclat?** macOS: activa el IAC Driver (Audio MIDI Setup → MIDI Studio). És un cable virtual: el que hi envies torna a entrar. Windows: loopMIDI.
+**On sona?** Windows: port "Microsoft GS Wavetable Synth". macOS: IAC + GarageBand o un DAW.
 
 ---
 
@@ -198,6 +206,6 @@ port = mido.open_input(callback=quan_arriba)
 | `piano(60, 0.7, 0.25)` | `note_on(note=60, velocity=89, time=0)` + `note_off(time=...)` |
 | `for note in pattern:` | `for note in pattern: track.append(...)` |
 | `wait(0.5)` | el `time` (delta) del missatge següent |
-| `block=False` | `port.iter_pending()` |
+| `block=False` | `entrada.get_message()` |
 
 **Sessió 7:** amb `pretty_midi` escriurem les notes directament amb inici i final en segons, sense gestionar ticks a mà.

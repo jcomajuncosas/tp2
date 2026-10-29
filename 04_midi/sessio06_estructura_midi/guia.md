@@ -62,10 +62,13 @@ Tots segueixen el patró **deltes → absolut → transforma → deltes**. El ch
 
 ## Notes sobre MIDI en temps real
 
-- `exemples.py` està organitzat en funcions: F5 només les defineix i es criden des del Shell (`llista_ports()`, `escolta_teclat()`, `escolta_teclat_sense_bloquejar()`, `escolta_teclat_callback()`, `toca_escala()`, `reprodueix_fitxer()`).
-- **Cal `python-rtmidi`** a Thonny. Sense aquest paquet, `mido` no veu cap port (`ModuleNotFoundError: rtmidi`, verificat).
-- `mid.play()` **no fa so**: només espera entre missatges. A Windows es pot enviar al "Microsoft GS Wavetable Synth". A macOS cal IAC Driver + GarageBand/DAW.
-- Validat amb un backend MIDI fals (sense hardware): llistar ports, entrada sense bloquejar, callback en un fil propi, sortida i reproducció d'un fitxer (8,0 s reals). **No s'ha provat amb un teclat ni un port real.**
+- **Llibreries:** `rtmidi2` per als ports + `mido` per als missatges (`mido.Message.from_bytes`). **No `python-rtmidi`**: no té paquet per a Python 3.13 (ni Mac M1 ni Windows; verificat a PyPI, última versió 1.5.8 fins a cp312) i la compilació falla sense les Xcode Command Line Tools. `rtmidi2` 1.5.0 sí que en té (cp313, Mac arm64 i Windows) i dona callbacks reals des del fil de RtMidi.
+- Validat al Mac del docent (M1, Thonny, IAC): llistat de ports i callback rebent tres `note_on` enviats pel mateix IAC.
+- Els ports s'obren **pel número**: a macOS en català el port es diu "Controlador IAC Bus 1", i `open_port("IAC*")` falla.
+- `recursos/exemples.py` està organitzat en funcions: F5 només les defineix i es criden des del Shell (`llista_ports()`, `prova_iac()`, `escolta_preguntant()`, `escolta_callback()`, `toca_escala()`, `reprodueix_fitxer()`, `silencia()`).
+- `prova_iac()` és la demo sense teclat: s'envia tres notes pel IAC i el callback les imprimeix mentre el programa principal dorm.
+- `mid.play()` **no fa so**: només espera entre missatges. A Windows es pot enviar al "Microsoft GS Wavetable Synth"; a macOS cal IAC + GarageBand/DAW.
+- ⚠️ Revisar sessions posteriors i plantilles del projecte final que facin servir ports MIDI amb `mido` (`open_input`/`open_output`): necessiten el mateix canvi a `rtmidi2`.
 
 ## Fitxers d'aquesta carpeta
 
@@ -84,5 +87,5 @@ Tots segueixen el patró **deltes → absolut → transforma → deltes**. El ch
 - [ ] Comprovar que `recursos/midi/example_scale.mid` és al repo públic després del sync
 - [ ] Muntar Google Form, Google Slides (diapositives 8–9: preparar fotocòpia amb quadrícula) i el cheat sheet com a Google Doc
 - [ ] Provar els notebooks a Colab: el render amb fluidsynth s'ha validat al contenidor, no a Colab
-- [ ] Provar `exemples.py` amb un teclat i un port reals a l'aula
+- [ ] Provar `exemples.py` amb un teclat real a l'aula (amb IAC ja s'ha provat el callback)
 - [ ] Decidir si es fa la demo de temps real segons l'equipament de l'aula
