@@ -1,17 +1,28 @@
 # Cheat sheet — Sessió 7
-### Bloc 4b: `pretty_midi`, seqüenciador/arpegiador i timing precís
+### Bloc 4b: seqüenciació MIDI en temps real i timing precís
 
 ---
 
-## 1. `pretty_midi`: MIDI d'alt nivell
+## 1. Per què avui tot és a Thonny
 
-A diferència de `mido` (missatges individuals, ticks, delta time), `pretty_midi` treballa amb **notes completes** i **temps en segons**:
+| Si la feina és... | Entorn |
+|---|---|
+| Fitxers `.mid` sense temps real: llegir, escriure, dibuixar (Sessió 6) | Colab o Thonny |
+| So en directe, ports MIDI, timing precís (avui) | **Thonny** |
+
+Colab corre en un servidor de Google: no té el teu altaveu ni el teu rellotge. Si una sessió necessita temps real, **tota** la sessió es fa a Thonny, encara que també desem algun fitxer.
+
+Avui necessites, a la mateixa carpeta: `sinte.py`, `exemples.py`, `assignment.py`. L'únic paquet nou és `pretty_midi` (Thonny → Tools → Manage packages).
+
+---
+
+## 2. `pretty_midi`: notes completes, temps en segons
 
 ```python
 import pretty_midi
 
-pm = pretty_midi.PrettyMIDI()
-piano = pretty_midi.Instrument(program=0)  # 0 = Acoustic Grand Piano (General MIDI)
+pm = pretty_midi.PrettyMIDI(initial_tempo=120)
+piano = pretty_midi.Instrument(program=0)        # 0 = piano (General MIDI)
 
 nota = pretty_midi.Note(velocity=80, pitch=60, start=0.0, end=0.5)
 piano.notes.append(nota)
@@ -20,151 +31,133 @@ pm.instruments.append(piano)
 pm.write('resultat.mid')
 ```
 
-Cap gestió de ticks, cap delta time — cada nota porta el seu `start` i `end` en segons directament. És molt més ràpid per a composició algorísmica.
+Cada nota porta el seu `start` i `end` **en segons des de l'inici**. `initial_tempo` només serveix per a la graella de ticks del fitxer: no mou les notes. Si vols que el tempo compti, calcula les durades a partir del tempo (una negra = `60 / tempo` segons).
 
 ---
 
-## 2. Comparació `mido` vs `pretty_midi`
+## 3. Delta contra absolut
 
-| | `mido` | `pretty_midi` |
+| | `mido` (Sessió 6) | `pretty_midi` (avui) |
 |---|---|---|
-| Nivell | Baix (missatges individuals) | Alt (notes completes) |
-| Temps | Ticks + delta time | Segons (start, end) |
-| Ús típic | Protocol, temps real, ports | Composició, anàlisi musical |
-| Crear una nota | 2 missatges (on/off) + gestió de ticks | 1 objecte `Note(start, end)` |
-
-**Connexió amb TP1:** `pretty_midi.Note(velocity, pitch, start, end)` s'assembla molt a `piano(pitch, velocity, duration)` — és, de fet, més proper a la llibreria `musica` que `mido`.
+| Nivell | missatges (`note_on`, `note_off`) | notes completes |
+| Temps | **delta**: des del missatge anterior | **absolut**: des de l'inici |
+| On és la 3a nota? | suma de les tres primeres deltes | `notes[2].start` |
+| Ús típic | protocol, ports, temps real | composició, anàlisi, seqüenciació |
 
 ---
 
-## 3. Crear una seqüència amb `pretty_midi`
+## 4. Un arpegiador
 
 ```python
-pm = pretty_midi.PrettyMIDI(initial_tempo=120)
-instrument = pretty_midi.Instrument(program=0)
-
-pattern = [60, 64, 67, 72]
-note_duration = 0.25
-
-t = 0.0
-for pitch in pattern:
-    note = pretty_midi.Note(velocity=90, pitch=pitch, start=t, end=t+note_duration)
-    instrument.notes.append(note)
-    t += note_duration
-
-pm.instruments.append(instrument)
-pm.write('sequencia.mid')
-```
-
----
-
-## 4. Un arpegiador simple
-
-```python
-def arpegiador(acord, n_repeticions, note_duration, mode='up'):
-    """Genera una llista de notes a partir d'un acord."""
+def arpegiador(acord, n_repeticions, mode='up'):
     if mode == 'up':
         seq = acord
     elif mode == 'down':
-        seq = acord[::-1]
+        seq = acord[::-1]                   # [::-1]: la llista al revés
     elif mode == 'updown':
-        seq = acord + acord[::-1][1:-1]
+        seq = acord + acord[::-1][1:-1]     # [1:-1]: sense el primer ni l'últim
+    else:
+        print("Mode desconegut:", mode)
+        seq = []
+    return seq * n_repeticions              # llista * n: repetida n vegades
 
-    return seq * n_repeticions
-
-# Exemple: Do major arpegiado, amunt i avall, 3 cops
-acord = [60, 64, 67]
-notes = arpegiador(acord, n_repeticions=3, note_duration=0.2, mode='updown')
+arpegiador([60, 64, 67], 2, 'updown')       # [60, 64, 67, 64, 60, 64, 67, 64]
 ```
 
 ---
 
-## 5. Escoltar MIDI: dues vies
+## 5. El sinte d'avui: `sinte.py`
 
-**A Colab**, amb `pretty_midi.fluidsynth()` (ja usat a Sessió 6):
 ```python
-audio = pm.fluidsynth(fs=44100)
-Audio(audio, rate=44100)
-```
+from sinte import SinteSimple, espera_fins
 
-**A Thonny**, amb la classe `MidiSynth` (proporcionada, veure `midisynth.py`):
-```python
-from midisynth import MidiSynth
-synth = MidiSynth()
-synth.note_on(60, velocity=80)
+synth = SinteSimple()                # SinteSimple(bpm_click=120): amb metrònom
+synth.note_on(60, 90)                # nota, velocity
 time.sleep(0.5)
 synth.note_off(60)
-synth.close()
+synth.close()                        # sempre al final
 ```
 
-`MidiSynth` és un embolcall de FluidSynth que reprodueix directament per l'altaveu, **sense necessitar IAC Driver ni LoopMIDI**. Internament fa exactament el que fa `pm.fluidsynth()` a Colab, però en temps real.
+Per dins és el callback del Bloc 3:
+1. El fil principal **no toca l'àudio**: `note_on` i `note_off` només afegeixen un encàrrec a una llista.
+2. El callback, a cada bloc de 64 mostres (1,45 ms), recull els encàrrecs nous, suma totes les veus (sinus amb decaïment) i escriu el buffer.
+3. Si hi ha metrònom, el click és un bucle de `P` mostres: `ona_click[(mostra) % P]`. El marca **la targeta de so** comptant mostres, no Python. Per això serveix de referència.
 
 ---
 
-## 6. El problema del timing precís en Python
+## 6. Tocar en directe: dues estratègies
 
-Quan vols reproduir una seqüència MIDI **en temps real** (no generar un fitxer), cal esperar el temps just entre nota i nota. Python no és un sistema de temps real — hi ha diverses estratègies, de pitjor a millor:
-
-### Estratègia A — `time.sleep()` (la més senzilla, la menys precisa)
+### Estratègia A — `time.sleep(durada)`
 
 ```python
-for nota, durada in seqüencia:
-    synth.note_on(nota)
-    time.sleep(durada)
-    synth.note_off(nota)
+for nota in notes:
+    synth.note_on(nota.pitch)
+    time.sleep(nota.end - nota.start)
+    synth.note_off(nota.pitch)
 ```
 
-**Problema:** `time.sleep()` no és precís (pot dormir més del demanat) i **l'error s'acumula**: si cada `sleep` es retarda 2ms, després de 50 notes ja portes 100ms de desfasament. A tempos ràpids o patrons densos (bateria), és audible.
+Cada espera comença quan acaba l'anterior. `time.sleep` mai dorm menys del demanat i sovint una mica més (en un MacBook s'han mesurat uns 4 ms per crida). **L'error s'acumula:** 32 notes × 4 ms = 124 ms de retard, més d'una semicorxera a 140 bpm.
 
-### Estratègia B — `time.perf_counter()` amb compensació d'error acumulat
+### Estratègia B — temps objectiu absolut
 
 ```python
-import time
-
 t_inici = time.perf_counter()
-t_acumulat = 0.0
-
-for nota, durada in seqüencia:
-    t_objectiu = t_inici + t_acumulat
-    while time.perf_counter() < t_objectiu:
-        pass  # espera activa (busy-wait)
-
-    synth.note_on(nota)
-    t_acumulat += durada
-
-print("Fet")
+for i in range(n_notes):
+    espera_fins(t_inici + i * pas)       # l'objectiu es calcula des de l'INICI
+    synth.note_on(84)
 ```
 
-**Per qué és millor:** en lloc d'esperar "durada" cada vegada (que acumula error), calculem el **temps objectiu absolut** des de l'inici, i esperem fins arribar-hi. Qualsevol petit retard en una nota NO s'acumula a les següents — es corregeix sol. `time.perf_counter()` també té més resolució que `time.sleep()`.
+Amb `pretty_midi` l'objectiu ja ve donat: `t_inici + nota.start`.
 
-**Cost:** el busy-wait (`while ... pass`) consumeix CPU activament mentre espera. Acceptable per a un sol fil de seqüenciació, problemàtic si en tens molts.
+L'objectiu de cada nota no depèn de quan ha acabat l'espera anterior: si una nota surt tard, **la següent torna al seu lloc**. L'error no s'acumula.
 
-### Altres estratègies (només per conèixer-les — no les implementarem)
+### `espera_fins`: l'espera híbrida
 
-- **Thread dedicat al timing:** per a seqüenciadors interactius (canviar el patró mentre sona), es necessita un fil separat que gestiona el rellotge, comunicant-se amb el fil principal via `queue.Queue`. Més robust, més complex.
-- **MIDI Clock:** un missatge MIDI especial (`clock`) que sincronitza diversos dispositius/programes al mateix tempo — és com fan els DAWs professionals per sincronitzar-se entre ells o amb hardware extern. Python pot actuar com a "clock slave" (seguir el tempo d'un DAW) o "master" (marcar el tempo a altres). És el que permetria, per exemple, que el teu seqüenciador Python toqui perfectament sincronitzat amb Ableton Live. No ho implementarem ara — la configuració (ports virtuals, sincronització) és un projecte en si mateix.
+```python
+def espera_fins(t_objectiu):
+    falta = t_objectiu - time.perf_counter()
+    if falta > 0.002:
+        time.sleep(falta - 0.002)        # 1) dorm fins a 2 ms abans
+    while time.perf_counter() < t_objectiu:
+        pass                             # 2) els darrers 2 ms, espera activa
+```
+
+- L'espera activa (`while ... pass`) és molt precisa, però mentre dura la CPU treballa i, sobretot, **el callback d'àudio no pot executar-se** (secció 7).
+- Dormint fins a 2 ms abans, tenim la precisió de l'espera activa sense bloquejar res.
 
 ---
 
-## 7. Quan triar cada enfocament
+## 7. La trampa: el GIL i el termini del callback
+
+Python només deixa executar codi a **un fil alhora** (el GIL, *Global Interpreter Lock*). El callback d'àudio és un altre fil: si el fil principal està calculant sense parar (espera activa llarga, un càlcul pesant en Python), el callback ha d'esperar torn.
+
+- El callback té un **termini**: 1,45 ms per bloc. Si arriba tard, la targeta sona silenci → espetecs.
+- Python no ho veu: el seu rellotge diu que tot va a temps.
+- Mesurat en un MacBook: 2 s d'espera activa pura → **1,67 s d'àudio perdut**. Amb `espera_fins` → 0 ms.
+
+Regla pràctica: el fil principal ha de **dormir** mentre espera, i la feina pesant s'ha de fer abans de tocar o a trossos petits.
+
+---
+
+## 8. Quan triar cada enfocament
 
 | Situació | Enfocament |
 |---|---|
-| Generar un fitxer `.mid` (sense reproduir en directe) | `pretty_midi`, sense preocupar-se del timing |
-| Demo simple, tempo lent, poces notes | Estratègia A (`time.sleep`) |
-| Seqüenciador/bateria en temps real, tempo mitjà-alt | Estratègia B (`perf_counter` + compensació) |
-| Seqüenciador interactiu (canviar patró en directe) | Thread dedicat (no implementat aquí) |
-| Sincronitzar amb un DAW extern | MIDI Clock (no implementat aquí) |
+| Generar un `.mid` (sense sonar en directe) | `pretty_midi`, sense preocupar-se del timing |
+| Demo curta, tempo lent | Estratègia A (`time.sleep`) |
+| Seqüenciador en directe, tempo mitjà o ràpid | Estratègia B amb `espera_fins` |
+| Molta feina de càlcul entre notes | Fer-la abans de tocar, o dins el callback a la mostra exacta (challenge 3) |
+| Canviar el patró mentre sona | Un fil dedicat al rellotge (no l'implementem) |
+| Seguir el tempo d'un DAW o d'una placa | MIDI Clock: 24 missatges per negra (challenge 2) |
 
 ---
 
-## 8. Connexió amb TP1 i tancament del Bloc 4
+## 9. Connexió amb TP1 i amb el Bloc 5
 
-| TP1 | TP2 Bloc 4 |
+| TP1 | Avui |
 |---|---|
-| `piano(pitch, vel, dur)` | `pretty_midi.Note(velocity, pitch, start, end)` |
-| `for note in pattern: piano(...)` | `for pitch in pattern: instrument.notes.append(Note(...))` |
-| Llibreria `musica` (abstracció pròpia) | `mido` (baix nivell) + `pretty_midi` (alt nivell) |
-| Performance de live-coding (Sessió 10, TP1) | El vostre seqüenciador d'avui — la mateixa lògica, ara amb MIDI real |
+| `for note in pattern: piano(...)` | `for pitch in seq: instrument.notes.append(Note(...))` |
+| Mòdul `%` | accent a la primera nota de cada grup: `i % cada == 0` |
+| Performance de live-coding | el vostre seqüenciador: la mateixa idea, amb un rellotge precís |
 
-**Preview Bloc 5:** el `MidiSynth` d'avui rep notes i les sintetitza amb un soundfont (timbres pregravats). Al Bloc 5 construirem el **nostre propi** sintetitzador (oscil·ladors, ADSR, FM) — controlat per les mateixes notes MIDI que ja sabeu generar.
+**Bloc 5:** el callback de `sinte.py` és el germà petit del sintetitzador que construireu (oscil·ladors, ADSR, FM), controlat per les mateixes notes que ja sabeu generar.
