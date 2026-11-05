@@ -39,7 +39,7 @@ RELEASED=(
   'sessio04_buffers_latencia'
   'sessio05_efecte_temps_real'
   'sessio06_estructura_midi'
-  # 'sessio07_sequenciador'
+  'sessio07_sequenciador'
   # 'sessio08_oscil_ladors_classes'
   # 'sessio09_fm_synth'
   # 'sessio10_consolidacio'
