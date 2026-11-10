@@ -155,7 +155,7 @@ Opcionalment, una classe `Groovebox` que conté totes les altres (composició al
 - `recursos/warmup_quiz.md` — 7 preguntes per a Google Forms (docent)
 - `recursos/slides_outline.md` — diapositives (docent)
 - `recursos/patches_bloc5a.ipynb` — demo Colab, 9 seccions
-- `recursos/exercici_paper.md` — full imprès de l'exercici en paper
+- `recursos/exercici_paper.md` — full imprès de l'exercici en paper (privat: només es reparteix en paper)
 - `recursos/audio/kick_sample.wav` — sample d'exemple
 - Solució: `_solucions/S08_oscil_ladors_classes/solucio.ipynb`
 
@@ -164,5 +164,4 @@ Opcionalment, una classe `Groovebox` que conté totes les altres (composició al
 - [ ] Muntar Google Form a partir de `warmup_quiz.md`
 - [ ] Muntar Google Slides a partir de `slides_outline.md`
 - [ ] Penjar `cheat_sheet.md` com a Google Doc
-- [ ] Imprimir `exercici_paper.md` (un per parella)
-- [ ] Afegir `exercici_paper.md` a la llista blanca de `sync-public.sh` (si es vol que els alumnes també el tinguin al repo)
+- [ ] Imprimir `exercici_paper.md` (un per parella). És material privat: no és a la llista blanca de `sync-public.sh` i no arriba al repo públic (decisió: només en paper, a classe)
