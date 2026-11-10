@@ -33,11 +33,11 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-        self.phase = 0.0
+        self._phase = 0.0
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
 
         if self.waveform == 'sine':
             out = np.sin(phases)
@@ -48,7 +48,7 @@ class Oscillator:
         else:
             raise ValueError(f"Forma d'ona desconeguda: {self.waveform}")
 
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
 

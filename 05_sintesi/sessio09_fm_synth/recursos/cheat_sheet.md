@@ -3,18 +3,21 @@
 
 ---
 
-## 1. El problema: `generate(duration)` no recorda la fase
+## 1. D'on venim: `generate(duration)` amb `_phase` (S8)
 
-A la Sessió 8, `Oscillator.generate(duration)` sempre començava `t=0`:
+A la Sessió 8, `Oscillator` ja guardava la fase dins l'objecte (`self._phase`): demanant el so tros a tros, els trossos encaixaven sense salts.
 
 ```python
-osc = Oscillator(freq=440)
-bloc1 = osc.generate(0.1)
-bloc2 = osc.generate(0.1)   # torna a començar a t=0!
-junts = np.concatenate([bloc1, bloc2])  # hi ha un "salt" de fase -> click
+osc = Oscillator(freq=440)              # (S8)
+tros1 = osc.generate(512 / 44100)
+tros2 = osc.generate(512 / 44100)       # continua on va acabar tros1
 ```
 
-Si volem so continu generat **bloc a bloc** (com exigeix el temps real), necessitem que l'oscil·lador recordi on s'havia quedat.
+Què canvia en temps real:
+- El callback demana **`frames` mostres**, no segons. Parlar en segons i tornar-ho a convertir en mostres és fer la volta pel camí llarg.
+- L'`Envelope` de la S8 necessitava saber la durada de la nota per endavant. En temps real no la sabem (§5).
+
+Per això avui tots els components passen a tenir el **mateix mètode, en mostres**: `process(n_samples)`.
 
 ---
 
@@ -26,13 +29,13 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-        self.phase = 0.0          # ESTAT persistent
+        self._phase = 0.0         # estat intern (com a la S8)
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
         out = np.sin(phases)      # (o square/sawtooth)
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)   # actualitzem per la propera crida
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)   # actualitzem per la propera crida
         return out
 ```
 
@@ -62,13 +65,13 @@ class LFO:
     def __init__(self, freq=5.0, sample_rate=44100):
         self.freq = freq
         self.sample_rate = sample_rate
-        self.phase = 0.0
+        self._phase = 0.0
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
         out = np.sin(phases)
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
 def vibrato(base_freq, lfo_freq, depth, duration, sample_rate=44100, block=512):
@@ -213,8 +216,8 @@ graph.wait()
 
 | Concepte | Sessió 8 | Sessió 9 |
 |---|---|---|
-| Mètode principal | `generate(duration)` | `process(n_samples)` |
-| Estat de fase | No (sempre `t=0`) | Sí (`self.phase` persistent) |
+| Mètode principal | `generate(duration)` (segons) | `process(n_samples)` (mostres) |
+| Estat de fase | Sí (`self._phase`) | Sí (`self._phase`) |
 | Envolvent | Calcula tota la corba d'un cop | Avança per `stage`, reacciona a `note_on`/`note_off` |
 | Ús típic | So offline (Colab) | So en temps real (Thonny) |
 | Nou aquí | — | LFO, FM, integració MIDI temps real, tast `signalflow` |

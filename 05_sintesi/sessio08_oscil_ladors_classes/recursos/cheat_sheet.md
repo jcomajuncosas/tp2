@@ -5,46 +5,91 @@
 
 ## 1. Per què classes, ara?
 
-Fins ara hem usat **funcions** que reben paràmetres i retornen un array (`generate_tone`, `echo`, `arpegiador`...). Funciona bé quan tota la informació necessària cap en una crida.
-
-Però un oscil·lador té **estat propi** que cal recordar entre crides: la seva freqüència actual, si està sonant o no, en quin punt de l'envolvent es troba... Quan una funció necessita "recordar coses" entre crides, una classe és l'eina natural:
+Fins ara hem fet servir **funcions**: reben paràmetres, retornen un array i **obliden** tot en acabar. Quan calia recordar alguna cosa d'una crida a la següent, la guardàvem en una **global**. A la S05:
 
 ```python
-# Amb funcions: cada crida és independent, no recorda res
-wave = generate_tone(freq=440, duration=1.0)
-
-# Amb classes: l'objecte recorda el seu estat
-osc = Oscillator(freq=440)
-wave1 = osc.generate(duration=0.5)
-osc.set_freq(880)          # canviem l'estat
-wave2 = osc.generate(duration=0.5)  # ara genera a la nova freqüència
+fase_sinus = 0.0      # la memòria del sinus
+fase_ringmod = 0.0    # cada oscil·lador nou necessita una global nova...
 ```
 
-**Recordeu la Sessió 5:** quan volíem dos ecos simultanis amb buffers globals, necessitàvem dues variables globals separades. Amb classes, cada `Oscillator()` porta el seu propi estat — en podem crear tants com calguin sense embolicar-nos amb noms de variables.
+I si en volguéssim cinc? Cinc globals, cinc noms, i molt fàcil equivocar-se. Una **classe** resol això: cada objecte porta les seves pròpies dades a dins.
+
+```python
+osc_a = Oscillator(freq=440)
+osc_b = Oscillator(freq=660)   # cada un té la seva freq i la seva fase
+```
 
 ---
 
-## 2. Repàs ràpid de classes (Python)
+## 2. Classes en Python: el mínim imprescindible
 
 ```python
-class Oscillator:
-    def __init__(self, freq, sample_rate=44100):
-        self.freq = freq                # atribut: dades de la instància
-        self.sample_rate = sample_rate
+class Fader:                          # la CLASSE: el motlle
+    def __init__(self, nivell=1.0):   # s'executa en crear cada objecte
+        self.nivell = nivell          # ATRIBUT: dada que guarda l'objecte
 
-    def generate(self, duration):       # mètode: funció que pertany a la classe
-        t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
-        return np.sin(2 * np.pi * self.freq * t)
+    def aplica(self, so):             # MÈTODE: funció que pertany a la classe
+        return so * self.nivell       # fa servir les dades de l'objecte
 
-osc = Oscillator(freq=440)   # crida __init__, crea una instància
-wave = osc.generate(1.0)     # crida el mètode generate
+f1 = Fader(1.0)                       # una INSTÀNCIA (un objecte concret)
+f2 = Fader(0.2)                       # una altra, independent
+f1.nivell = 0.5                       # canviem NOMÉS f1
+so_fluix = f2.aplica(so)              # cridem un mètode
 ```
 
-`self` és la pròpia instància — permet que el mètode accedeixi als seus propis atributs (`self.freq`).
+| Paraula | Què és |
+|---|---|
+| classe | El motlle (`Fader`). Nom amb majúscula |
+| instància / objecte | Cada peça feta amb el motlle (`f1`, `f2`) |
+| `__init__` | El mètode que prepara l'objecte quan es crea |
+| `self` | "Aquest objecte en concret". Primer paràmetre de **tots** els mètodes |
+| atribut | Una dada de l'objecte: `self.nivell` |
+| mètode | Una funció de l'objecte: `f1.aplica(so)` |
+
+### Errors típics
+
+| Escrius | Passa | Correcte |
+|---|---|---|
+| `def aplica(so):` | Error en cridar-lo (rep un paràmetre de més) | `def aplica(self, so):` |
+| `nivell = nivell` dins `__init__` | La dada es perd: `AttributeError: ... has no attribute 'nivell'` | `self.nivell = nivell` |
+| `f1.aplica` | No s'executa res (falten parèntesis) | `f1.aplica(so)` |
+| `return so * nivell` | `NameError`: dins el mètode, `nivell` no existeix | `return so * self.nivell` |
 
 ---
 
-## 3. La classe `Oscillator` (model modular)
+## 3. L'esquelet d'una classe (el ritual)
+
+Abans d'omplir res, escriu l'esquelet: quines dades guarda i què sap fer.
+
+```python
+class NomDeLaClasse:
+    def __init__(self, param1, param2=valor_per_defecte):
+        self.param1 = param1         # configuració
+        self.param2 = param2
+        self._estat = 0.0            # estat intern
+
+    def metode(self, argument):
+        pass                         # (ho omplirem després)
+```
+
+Una manera de pensar-ho en paper: una caixa amb tres franges — **nom / atributs / mètodes amb signatura** (`metode(argument) → què retorna`).
+
+---
+
+## 4. Configuració i estat intern (visibilitat)
+
+```python
+self.freq = freq      # configuració: la tria qui fa servir l'objecte
+self._phase = 0.0     # estat intern: l'objecte el fa evolucionar sol
+```
+
+- El **guió baix** inicial és un **conveni**: vol dir "és intern, no el toquis des de fora". Python no ho impedeix: confia en tu.
+- Altres llenguatges (C++, Java) tenen `private` i és el compilador qui ho fa complir.
+- Per canviar la configuració, accedeix directament a l'atribut: `osc.freq = 880`. A Python **no** cal escriure mètodes `get_freq()` / `set_freq()`.
+
+---
+
+## 5. La classe `Oscillator` (amb memòria de fase)
 
 ```python
 class Oscillator:
@@ -52,31 +97,44 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-
-    def set_freq(self, freq):
-        self.freq = freq
+        self._phase = 0.0                     # on som del cicle (0 … 2π)
 
     def generate(self, duration):
-        n = int(self.sample_rate * duration)
-        t = np.linspace(0, duration, n, endpoint=False)
+        n = int(round(self.sample_rate * duration))
+        increment = 2 * np.pi * self.freq / self.sample_rate
+        fases = self._phase + increment * np.arange(n)            # continuem on ho vam deixar
+        self._phase = (self._phase + increment * n) % (2 * np.pi) # recordem per a la propera
 
         if self.waveform == 'sine':
-            return np.sin(2 * np.pi * self.freq * t)
+            return np.sin(fases)
         elif self.waveform == 'square':
-            return signal.square(2 * np.pi * self.freq * t)
+            return signal.square(fases)
         elif self.waveform == 'sawtooth':
-            return signal.sawtooth(2 * np.pi * self.freq * t)
+            return signal.sawtooth(fases)
         else:
-            raise ValueError(f"Forma d'ona desconeguda: {self.waveform}")
+            print("Forma d'ona desconeguda:", self.waveform, "→ retorno silenci")
+            return np.zeros(n)
 ```
 
-**Important:** `Oscillator` per si sol **no té forma de "nota"** — només xiula contínuament a una freqüència. Si li demanes 2 segons, sonarà 2 segons sencers sense atac ni final suau. Li falta l'envolvent.
+Són les mateixes línies de `fase_sinus` de la S05, però ara la fase viu **dins** l'objecte. Si demanem el so tros a tros (com farà un callback), els trossos encaixen sense salts:
+
+```python
+osc = Oscillator(freq=440)
+tros1 = osc.generate(512 / 44100)
+tros2 = osc.generate(512 / 44100)   # comença just on va acabar tros1
+```
+
+Sense `_phase`, cada tros tornaria a començar a zero: un salt cada 512 mostres, ~86 salts per segon → un brunzit.
+
+**Important:** `Oscillator` per si sol **no té forma de nota** — només sona contínuament. Li falta l'envolvent.
+
+*(Nota: les ones quadrada i de dent de serra de `scipy` són "ingènues": a notes molt agudes fan aliasing. Al registre que fem servir no es nota.)*
 
 ---
 
-## 4. La classe `Envelope` (ADSR, separada)
+## 6. La classe `Envelope` (ADSR)
 
-ADSR = **A**ttack, **D**ecay, **S**ustain, **R**elease — quatre fases d'amplitud al llarg del temps:
+ADSR = **A**ttack, **D**ecay, **S**ustain, **R**elease:
 
 ```
 amplitud
@@ -90,7 +148,7 @@ amplitud
 
 - **Attack:** temps per pujar de 0 al màxim
 - **Decay:** temps per baixar del màxim al nivell de sustain
-- **Sustain:** nivell (no temps!) que es manté mentre la nota està activa
+- **Sustain:** **nivell** (no temps!) que es manté mentre la nota està premuda
 - **Release:** temps per baixar de sustain a 0, després de deixar anar la nota
 
 ```python
@@ -102,10 +160,6 @@ class Envelope:
         self.release = release
 
     def generate(self, note_duration, sample_rate=44100):
-        """
-        note_duration: quant de temps la nota està 'premuda'
-        (no inclou el release — el release s'afegeix DESPRÉS)
-        """
         n_attack  = int(self.attack  * sample_rate)
         n_decay   = int(self.decay   * sample_rate)
         n_sustain = max(0, int(note_duration * sample_rate) - n_attack - n_decay)
@@ -119,89 +173,97 @@ class Envelope:
         return np.concatenate([env_attack, env_decay, env_sustain, env_release])
 ```
 
+- `note_duration` és el temps que la nota està premuda; el release s'afegeix **després**.
+- Si la nota és més curta que attack + decay, l'envolvent fa igualment A i D sencers: la nota dura una mica més.
+- **Aproximació:** aquí l'envolvent sap la durada de la nota per endavant. En temps real (S09) no la sabrem.
+
 ---
 
-## 5. Combinar-los: una "nota" completa
+## 7. Combinar-los: una nota completa
 
 ```python
 osc = Oscillator(freq=440, waveform='sine')
 env = Envelope(attack=0.02, decay=0.1, sustain=0.6, release=0.3)
 
-note_duration = 0.5  # quant de temps es manté premuda la nota
-total_duration = note_duration + env.release  # l'oscil·lador ha de sonar tota l'estona
-
-wave = osc.generate(total_duration)
-envelope_curve = env.generate(note_duration)
-
-# Igualem longituds (per arrodoniments) i multipliquem
-n = min(len(wave), len(envelope_curve))
-nota_final = wave[:n] * envelope_curve[:n]
+corba = env.generate(note_duration=0.5)
+ona = osc.generate(len(corba) / 44100)   # tantes mostres com la corba
+nota = ona * corba
 ```
 
-**La idea central de la sessió:** l'oscil·lador defineix el *timbre* (el color del so); l'envolvent defineix la *forma temporal* (com neix i mor la nota). Es combinen multiplicant, mai barrejant la lògica dins una sola classe.
+**La idea central:** l'oscil·lador defineix el *timbre*; l'envolvent, la *forma temporal*. Es combinen multiplicant, sense barrejar la lògica dins una sola classe.
+
+### Objectes dins d'objectes (composició)
+
+Un atribut pot ser un altre objecte. Així es construeix un instrument a partir de peces:
+
+```python
+class Instrument:
+    def __init__(self):
+        self.osc = Oscillator(waveform='sawtooth')   # l'instrument TÉ un oscil·lador
+        self.env = Envelope(attack=0.005)            # ...i una envolvent
+```
+
+Les peces es creen **un cop**, a `__init__`, i es reutilitzen a cada nota.
 
 ---
 
-## 6. MIDI controla l'embolcall, no l'oscil·lador
+## 8. MIDI controla l'envolvent, no l'oscil·lador
 
 ```python
-# note_on: comença l'Attack de l'envolvent (l'oscil·lador NO "es dispara")
-# note_off: comença el Release
-
 def note_to_freq(note_number):
-    """Converteix número MIDI a freqüència (Hz)."""
     return 440.0 * (2 ** ((note_number - 69) / 12))
 
-# Exemple: nota 60 (Do central)
-freq = note_to_freq(60)  # ~261.6 Hz
-
-osc = Oscillator(freq=freq)
-env = Envelope(attack=0.01, decay=0.05, sustain=0.7, release=0.2)
+note_to_freq(60)   # ~261.6 Hz (Do central)
 ```
 
-`note_on(60, velocity=80)` no "encén" l'oscil·lador — fixa la seva freqüència i dispara l'Attack de l'envolvent. `note_off(60)` dispara el Release. L'oscil·lador, conceptualment, "sona sempre" — és l'envolvent qui decideix quan el sentim.
+- `note_on` → comença l'Attack de l'envolvent; `note_off` → comença el Release.
+- L'oscil·lador, conceptualment, sona sempre: és l'envolvent qui decideix quan el sentim.
+- La velocity (0-127) es pot convertir en volum: `nota * (velocity / 127)`.
 
 ---
 
-## 7. La classe `SamplePlayer` (one-shot, un component diferent)
+## 9. La classe `SamplePlayer`
 
-Fins ara: l'`Oscillator` **genera** so des de zero amb matemàtiques. El `SamplePlayer` és diferent — **reprodueix** un so ja gravat (un fitxer WAV curt, com un cop de bombo o una veu), des del principi, cada vegada que se li demana:
+L'`Oscillator` **genera** so amb matemàtiques. El `SamplePlayer` **reprodueix** un so ja gravat (un WAV curt: un cop de bombo, una veu...).
 
 ```python
-class SamplePlayer:
-    def __init__(self, filepath, sample_rate=44100):
-        self.sample_rate = sample_rate
-        data, sr = sf.read(filepath)
-        if sr != sample_rate:
-            # (simplificació: assumim mateix sample_rate; resampling és més complex)
-            pass
-        self.sample = data
-
-    def play(self, gain=1.0):
-        """Retorna l'array del sample, llest per sonar."""
-        return self.sample * gain
-
-# Ús:
-kick = SamplePlayer('kick.wav')
-wave = kick.play(gain=0.8)
+kick = SamplePlayer('kick_sample.wav', gain=0.8)
+pas = kick.generate(0.5)    # exactament 0.5 s: el sample i, si sobra temps, silenci
+kick.gain = 0.3             # el volum és un atribut: es canvia directament
 ```
 
-**Contrast clau:** `Oscillator` = generem el so (síntesi). `SamplePlayer` = reproduïm un so ja existent (sampling). Els dos són components vàlids d'un sintetitzador/instrument, i sovint es combinen (per exemple, un kick sintetitzat + un sample de crash de platet).
+`generate(duration)` retorna sempre `duration` segons: si el sample és més llarg, el retalla; si és més curt, hi afegeix silenci. Així encaixa en un pas d'un seqüenciador.
 
 ---
 
-## 8. Taula resum
+## 10. Mateix nom per a la mateixa feina
 
-| Classe | Funció | Genera o reprodueix? | Té "forma de nota"? |
-|---|---|---|---|
-| `Oscillator` | Defineix el timbre (forma d'ona, freqüència) | Genera | No — sona sempre igual |
-| `Envelope` | Defineix la forma temporal (ADSR) | Genera una corba | És la que dona forma de nota |
-| `SamplePlayer` | Reprodueix un so pregravat | Reprodueix | Depèn del sample (sovint ja en té) |
+`Oscillator.generate(duration)` i `SamplePlayer.generate(duration)` fan la mateixa mena de feina: retornar `duration` segons de so. Com que es diuen igual, es poden fer servir sense saber qui és qui:
+
+```python
+fonts = [Oscillator(55, 'sawtooth'), SamplePlayer('kick_sample.wav')]
+mescla = np.zeros(int(0.5 * 44100))
+for font in fonts:
+    mescla = mescla + font.generate(0.5)
+```
+
+No cal cap mecanisme especial: a Python n'hi ha prou que el mètode es digui igual (*duck typing*: "si camina com un ànec..."). A la S09 ho convertirem en conveni per a tots els components.
 
 ---
 
-## 9. Connexió amb TP1 i preview
+## 11. Taula resum
 
-- Classes a TP1 (poc treballades) → ara és on cobren sentit real: encapsular estat (freqüència, fase, paràmetres ADSR) que cal recordar entre crides
-- Connexió amb Sessió 5: el buffer global de l'eco "hauria estat millor com a classe" — avui veiem exactament per què
-- **Sessió 9:** FM synthesis (un oscil·lador modula la freqüència d'un altre), integració amb MIDI en temps real, i un primer tast de `pyo` (la mateixa idea, en una llibreria professional)
+| Classe | Funció | Genera o reprodueix? | Estat intern | Té forma de nota? |
+|---|---|---|---|---|
+| `Oscillator` | Timbre (forma d'ona, freqüència) | Genera | `_phase` | No — sona sempre |
+| `Envelope` | Forma temporal (ADSR) | Genera una corba | — | És qui dona forma de nota |
+| `SamplePlayer` | So pregravat | Reprodueix | — | Depèn del sample |
+
+---
+
+## 12. Preview: Sessió 9
+
+- **Temps real (Thonny):** el callback demana el so en mostres (`frames`), no en segons → `generate(duration)` es converteix en `process(n_samples)`, el mateix nom per a tots els components
+- L'envolvent amb `note_on`/`note_off` de debò (sense saber la durada per endavant)
+- FM synthesis i MIDI en directe
+- Un tast de `signalflow`: la mateixa idea, en una llibreria professional

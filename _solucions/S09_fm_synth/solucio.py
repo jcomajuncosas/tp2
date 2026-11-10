@@ -18,11 +18,11 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-        self.phase = 0.0
+        self._phase = 0.0
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
         if self.waveform == 'sine':
             out = np.sin(phases)
         elif self.waveform == 'square':
@@ -31,16 +31,16 @@ class Oscillator:
             out = 2 * ((phases / (2 * np.pi)) % 1.0) - 1.0
         else:
             raise ValueError(f"Forma d'ona desconeguda: {self.waveform}")
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
     # Challenge 1: versió sample-by-sample (afegida a la classe per comoditat)
     def process_sample_by_sample(self, n_samples):
         out = np.zeros(n_samples)
         for i in range(n_samples):
-            out[i] = np.sin(self.phase)
-            self.phase += 2 * np.pi * self.freq / self.sample_rate
-            self.phase %= 2 * np.pi
+            out[i] = np.sin(self._phase)
+            self._phase += 2 * np.pi * self.freq / self.sample_rate
+            self._phase %= 2 * np.pi
         return out
 
 
@@ -127,7 +127,5 @@ assert bw_fm > bw_v * 3, f"FM hauria d'ocupar més banda ({bw_fm:.0f}Hz vs {bw_v
 print(f"✅ Test amplada de banda: vibrato={bw_v:.0f}Hz | FM={bw_fm:.0f}Hz")
 
 
-print("
-✅ Tots els TODOs de S09 validats correctament.")
-print("
-NOTA DOCENT — Challenges: veure S09_challenges_solucio.py")
+print("\n✅ Tots els TODOs de S09 validats correctament.")
+print("\nNOTA DOCENT — Challenges: veure S09_challenges_solucio.py")

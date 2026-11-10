@@ -56,7 +56,7 @@ bloc1 = osc.process(100)
 bloc2 = osc.process(100)
 ```
 
-**Si `process()` recorda la fase entre crides (a diferència de `generate()` de la S8), què esperes de la relació entre `bloc1` i `bloc2`?**
+**Si `process()` recorda la fase entre crides (igual que `generate()` a la S8), què esperes de la relació entre `bloc1` i `bloc2`?**
 
 - A) Seran exactament idèntics, mostra per mostra
 - ✅ B) `bloc2` continuarà l'ona just on `bloc1` l'havia deixat, sense salts
@@ -79,7 +79,7 @@ bloc2 = osc.process(100)
 ### Pregunta 7 — Detecció d'error (callback temps real)
 
 ```python
-def synth_callback(outdata, frames, time, status):
+def synth_callback(outdata, frames, time_info, status):
     wave = osc.process(frames)
     outdata[:, 0] = wave
 

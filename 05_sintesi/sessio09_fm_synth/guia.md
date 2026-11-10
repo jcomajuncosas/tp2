@@ -1,7 +1,7 @@
 # Sessió 9 — Bloc 5b: Arquitectura UGen, FM i integració temps real + MIDI
 
 **Bloc temàtic:** 05_sintesi
-**Tipus de sessió:** ⚠️ DENSA — 5 blocs de contingut nou en 2h. Menys workshop lliure que de costum; prioritzar avançar la demo guiada per davant del repte obert.
+**Tipus de sessió:** ⚠️ DENSA — 5 blocs de contingut nou en 2h. Menys workshop lliure que de costum; prioritzar avançar la demo guiada per davant del repte obert. (Alleugerida respecte a la versió inicial: la fase persistent i el problema del brunzit tros a tros ja es treballen a la S8; aquí només es recorden.)
 **Durada:** 2h
 
 ---
@@ -22,7 +22,7 @@
 
 ## Objectius
 
-1. Entendre per què `generate(duration)` (S8) provoca discontinuïtats de fase si s'encadena, i com `process(n_samples)` ho resol mantenint estat persistent
+1. Passar de `generate(duration)` (S8, ja amb `self._phase`) a `process(n_samples)`: el callback demana mostres, no segons, i l'envolvent en temps real necessita la mateixa interfície per blocs
 2. Conèixer l'arquetip **UGen**: una interfície comuna (`process()`) que qualsevol component d'un sintetitzador modular pot implementar — connexió directa amb el model mental de Max/Pd
 3. Distingir **control rate** (un LFO modulant suaument un paràmetre — vibrato) d'**audio rate** (el so que sentim directament), amb un exemple net on l'efecte és clarament perceptible com a "control", no com a timbre
 4. Construir FM synthesis com **a cas d'UGens encadenats a audio rate** (NO com a exemple de control rate): un modulador d'índex de modulació gran (`I`) varia la freqüència d'un portador i genera un timbre nou, tots dos amb la mateixa interfície `process()`
@@ -33,7 +33,7 @@
 
 **Per què "conveni sense herència formal" i no `class Oscillator(UGen)`:** es va valorar fer-ho amb herència real (classe base `UGen` amb `process()` abstracte), però es descarta conscientment. Aquest grup només té TP1 (Python bàsic) com a base — l'experiència prèvia del docent amb herència en cohorts antigues (Processing+MINIM) **no aplica als alumnes actuals**, que no l'han vist. Ensenyar herència real aquí seria afegir mecànica de llenguatge nova en una sessió ja densa. En lloc d'això, `Oscillator`, `LFO` i `Envelope` simplement **comparteixen el mateix nom de mètode (`process`) per conveni** — la idea de "interfície comuna" s'ensenya com a disseny, no com a herència Python. Si en el futur el grup tingués més bagatge OOP, val la pena revisar aquesta decisió.
 
-**Per què es mostra explícitament l'evolució "abans/després":** en lloc d'introduir `process()` directament, `exemples.py` comença recordant `OscillatorBatch.generate()` (S8) i fa sentir el click de fase real abans de mostrar la solució. Costa ~3 minuts més que anar directe al UGen, però fa molt més evident *per què* calia el canvi — no és arquitectura per arquitectura.
+**Per què no es repeteix la demo del clic de fase:** des de la revisió de la S8 (nov. 2026), el problema "cada tros torna a començar a zero" i la solució (`self._phase` dins l'objecte) es fan a la S8, a Colab, amb 200 trossos de 512 mostres (brunzit audible, salt ~9× el pas normal). Aquí la Secció 1 és només un recordatori d'un minut, i el canvi que es motiva és el d'**interfície**: el callback parla en mostres (`frames`), i l'envolvent en temps real (Secció 5) també ha d'anar per blocs → mateix mètode `process(n_samples)` per a tots. (Nota: la demo antiga encadenava dos blocs de 0,1 s a 440 Hz = 44 cicles exactes, i per tant **no feia cap clic**; la nova demo de la S8 fa servir 512 mostres, que no són un nombre enter de cicles.)
 
 **Per què cal explicar primer "control rate" de debò abans de mostrar el nostre codi:** en un motor DSP real, un generador de control (LFO, envolupant) calcula els SEUS PROPIS valors a una freqüència molt inferior a la d'àudio (p.ex. 100-200 valors/segon en lloc de 44100/s) — perquè el paràmetre que controla no necessita més resolució que aquesta. **El nostre `LFO` a `exemples.py` NO fa això — és un híbrid pedagògic**: reutilitza exactament la mateixa lògica que `Oscillator` (calcula a 44100Hz igual que el portador) i només "fingim" que està a control rate llegint-ne l'última mostra de cada bloc (`lfo_out[-1]`). És important dir-ho explícitament als alumnes per evitar que pensin que el codi fa quelcom que no fa.
 
@@ -53,7 +53,7 @@ Verificat objectivament amb anàlisi espectral: el vibrato per defecte (`depth=6
 
 ## Connexions amb sessions anteriors
 
-- **Sessió 8:** `Oscillator`/`Envelope` es recuperen i es redissenyen explícitament — no són classes noves, és la mateixa idea amb una interfície més robusta.
+- **Sessió 8:** `Oscillator` (ja amb `self._phase`) i `Envelope` es recuperen i se'ls canvia la interfície (`generate` → `process`) — no són classes noves, és la mateixa idea amb una interfície més robusta.
 - **Sessió 5 (callback, `sd.Stream`):** el patró `outdata[:, 0] = ...` dins un callback és exactament el de la Secció 6/6b d'avui, ara alimentat per les classes UGen en lloc d'efectes de senyal directe.
 - **Sessió 7 (MIDI, timing):** `note_to_freq` ja es coneixia de S8; avui es connecta amb un port MIDI real via `mido` (lectura, no escriptura com a S6-S7).
 - **Max/Pd (any de gap):** l'arquetip UGen es presenta explícitament com "programar així és cablejar un sintetitzador modular" — connexió conceptual directa amb el patching.

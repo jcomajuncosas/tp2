@@ -19,22 +19,22 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-        self.phase = 0.0
+        self._phase = 0.0
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
         out = np.sin(phases)
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
     # Challenge 1 — versió sample-by-sample (codi donat al challenge)
     def process_sample_by_sample(self, n_samples):
         out = np.zeros(n_samples)
         for i in range(n_samples):
-            out[i] = np.sin(self.phase)
-            self.phase += 2 * np.pi * self.freq / self.sample_rate
-            self.phase %= 2 * np.pi
+            out[i] = np.sin(self._phase)
+            self._phase += 2 * np.pi * self.freq / self.sample_rate
+            self._phase %= 2 * np.pi
         return out
 
 

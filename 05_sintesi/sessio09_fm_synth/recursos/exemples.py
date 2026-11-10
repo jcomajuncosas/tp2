@@ -14,47 +14,39 @@ sample_rate = 44100
 
 
 # =================================================================
-# 1. Recordatori de la Sessió 8: el problema del "click" de fase
+# 1. Recordatori de la Sessió 8: ja teníem la fase dins l'objecte
 # =================================================================
-print("=== 1. El problema: Oscillator (S8) generat per blocs ===")
+print("=== 1. D'on venim: Oscillator.generate(duration) amb self._phase (S8) ===")
 
-
-class OscillatorBatch:
-    """Versió de la Sessió 8 — recordatori. NO l'usarem més a partir d'aquí."""
-
-    def __init__(self, freq=440.0, sample_rate=44100):
-        self.freq = freq
-        self.sample_rate = sample_rate
-
-    def generate(self, duration):
-        n = int(self.sample_rate * duration)
-        t = np.linspace(0, duration, n, endpoint=False)
-        return np.sin(2 * np.pi * self.freq * t)
-
-
-osc_batch = OscillatorBatch(freq=440)
-bloc1 = osc_batch.generate(0.1)
-bloc2 = osc_batch.generate(0.1)  # generate() torna a començar t=0 cada cop!
-junts = np.concatenate([bloc1, bloc2])
-
-print("generate() sempre comença la t a 0 → si encadenem dos blocs,")
-print("la fase 'salta' i sentim un click. Comprova-ho:")
-sd.play(junts, sample_rate)
-sd.wait()
-print("(si has sentit un petit clic/glitch entre els dos blocs, és exactament això)\n")
+# A la S8, Oscillator.generate(duration) ja guardava self._phase: demanant-li
+# el so tros a tros (200 trossos de 512 mostres), els trossos encaixaven
+# sense el brunzit de "cada tros torna a començar a zero".
+#
+# Què canvia avui? Dues coses del temps real:
+#   · El callback ens demana `frames` MOSTRES, no segons. Parlar en segons
+#     (generate(frames / sample_rate)) i tornar-los a convertir en mostres
+#     és fer la volta pel camí llarg.
+#   · L'envolvent de la S8 necessitava saber la durada de la nota per
+#     endavant. En temps real no la sabem (el note_off arriba quan arriba):
+#     també haurà d'anar bloc a bloc (Secció 5).
+#
+# Solució: un mètode pensat per blocs, en mostres, i amb el MATEIX NOM per a
+# tots els components — com generate() a la S8, però ara és un conveni:
+# process(n_samples).
+print("Mateixa fase que a la S8; avui canviem la interfície: process(n_samples).\n")
 
 
 # =================================================================
 # 2. L'arquetip UGen: process(n_samples), amb estat persistent
 # =================================================================
-print("=== 2. La solució: process(n_samples) amb fase pròpia ===")
+print("=== 2. L'arquetip UGen: process(n_samples), amb la fase de la S8 ===")
 
 
 class Oscillator:
     """
-    Mateixa idea que a la Sessió 8, però ara amb MEMÒRIA pròpia de fase.
-    En lloc de generate(duration) -> tot l'array d'un cop,
-    process(n_samples) -> un bloc, recordant on s'havia quedat.
+    Mateixa idea i mateixa fase (self._phase) que a la Sessió 8.
+    En lloc de generate(duration) -> un tros de `duration` segons,
+    process(n_samples) -> un bloc de n_samples mostres (el que demana el callback).
 
     Aquest és el patró "UGen" (unit generator): una interfície comuna
     que qualsevol peça d'un sintetitzador modular pot implementar.
@@ -66,12 +58,12 @@ class Oscillator:
         self.freq = freq
         self.waveform = waveform
         self.sample_rate = sample_rate
-        self.phase = 0.0  # ESTAT: la fase acumulada, en radians
+        self._phase = 0.0  # estat intern (com a la S8): la fase acumulada, en radians
 
     def process(self, n_samples):
         # increment de fase per mostra, segons la freq actual
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
 
         if self.waveform == 'sine':
             out = np.sin(phases)
@@ -83,19 +75,20 @@ class Oscillator:
             raise ValueError(f"Forma d'ona desconeguda: {self.waveform}")
 
         # actualitzem la fase per a la PROPERA crida (mòdul 2π per evitar desbordaments)
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
 
 osc = Oscillator(freq=440)
-bloc1 = osc.process(4410)   # 0.1s
-bloc2 = osc.process(4410)   # 0.1s — continua la fase d'on l'havia deixat
-junts = np.concatenate([bloc1, bloc2])
+blocs = []
+for i in range(200):
+    blocs.append(osc.process(512))   # el que demanaria el callback: 512 mostres cada cop
+junts = np.concatenate(blocs)
 
-print("Ara process() recorda la fase entre crides. Compara amb l'exemple 1:")
+print("200 blocs de 512 mostres amb process(). Ha de sonar continu, com a la S8:")
 sd.play(junts, sample_rate)
 sd.wait()
-print("(hauria de sonar com una ona contínua, sense click)\n")
+print("(cap brunzit: la fase continua d'un bloc al següent)\n")
 
 
 # =================================================================
@@ -143,13 +136,13 @@ class LFO:
     def __init__(self, freq=5.0, sample_rate=44100):
         self.freq = freq
         self.sample_rate = sample_rate
-        self.phase = 0.0
+        self._phase = 0.0
 
     def process(self, n_samples):
         phase_inc = 2 * np.pi * self.freq / self.sample_rate
-        phases = self.phase + phase_inc * np.arange(n_samples)
+        phases = self._phase + phase_inc * np.arange(n_samples)
         out = np.sin(phases)
-        self.phase = (phases[-1] + phase_inc) % (2 * np.pi)
+        self._phase = (phases[-1] + phase_inc) % (2 * np.pi)
         return out
 
 

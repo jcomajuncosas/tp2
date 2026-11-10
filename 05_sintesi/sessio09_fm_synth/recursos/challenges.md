@@ -13,9 +13,9 @@ A `exemples.py` i `assignment.py`, `Oscillator.process(n_samples)` genera un **b
 def process_sample_by_sample(self, n_samples):
     out = np.zeros(n_samples)
     for i in range(n_samples):
-        out[i] = np.sin(self.phase)
-        self.phase += 2 * np.pi * self.freq / self.sample_rate
-        self.phase %= 2 * np.pi
+        out[i] = np.sin(self._phase)
+        self._phase += 2 * np.pi * self.freq / self.sample_rate
+        self._phase %= 2 * np.pi
     return out
 ```
 

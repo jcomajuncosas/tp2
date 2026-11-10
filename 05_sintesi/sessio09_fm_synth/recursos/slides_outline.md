@@ -13,29 +13,29 @@
 
 ### Diapositiva 2 — On érem (Sessió 8)
 ```python
-osc.generate(duration)        # tot l'array d'un sol cop
-env.generate(note_duration)   # calcula tota la corba ADSR, sabent la durada per endavant
+osc.generate(duration)        # un tros de `duration` segons, amb self._phase: sense salts
+env.generate(note_duration)   # tota la corba ADSR, sabent la durada per endavant
 ```
-- Calen saber la durada per endavant
-- Avui: què passa quan NO la sabem (temps real)?
+- La fase ja viu dins l'objecte: tros a tros, sense brunzit
+- Però tot es demana en **segons**, i l'envolvent necessita saber la durada
 
 ---
 
-### Diapositiva 3 — El problema
+### Diapositiva 3 — El problema d'avui: el temps real
 ```python
-osc = Oscillator(freq=440)
-bloc1 = osc.generate(0.1)
-bloc2 = osc.generate(0.1)
-junts = np.concatenate([bloc1, bloc2])
+def callback(outdata, frames, time_info, status):
+    outdata[:, 0] = ...    # em demanen `frames` MOSTRES, ara mateix
 ```
-- Demo en directe: escoltar `junts` — hi ha un click audible
-- 🎤 *Pregunta: per què? Cada crida de `generate()` torna a començar a `t=0`*
+- El callback parla en **mostres**, no en segons
+- I no sap quan arribarà el `note_off`: l'envolvent no pot calcular la corba sencera
+- 🎤 *Pregunta: com hauria de ser un mètode pensat per a això?*
 
 ---
 
 ### Diapositiva 4 — La pregunta clau
-- I si, en lloc de demanar "genera'm X segons", li demanéssim "dona'm el SEGÜENT tros, i recorda on et quedaves"?
-- Calen dues coses: (1) un mètode pensat per blocs, (2) estat que persisteixi entre crides
+- I si li demanéssim "dona'm les **N mostres següents**, i recorda on et quedaves"?
+- Calen dues coses: (1) un mètode pensat per blocs, en mostres; (2) estat que persisteixi entre crides (la fase ja el té; l'envolvent l'haurà de tenir)
+- I el **mateix nom** per a tots els components — la idea de `generate()` a la S8, ara convertida en conveni
 
 ---
 
@@ -43,10 +43,10 @@ junts = np.concatenate([bloc1, bloc2])
 ```python
 def process(self, n_samples):
     ...
-    self.phase = ...   # es guarda per a la PROPERA crida
+    self._phase = ...   # es guarda per a la PROPERA crida
     return out
 ```
-- `process(n_samples) -> array`, amb `self.phase` persistent
+- `process(n_samples) -> array`, amb `self._phase` persistent
 - "UGen" (*unit generator*): interfície comuna per a qualsevol component d'un sintetitzador modular
 
 ---
@@ -58,16 +58,16 @@ def process(self, n_samples):
 
 ---
 
-### Diapositiva 7 — Demo en directe: sense click
+### Diapositiva 7 — Demo en directe: blocs de 512 mostres
 ```python
 osc = Oscillator(freq=440)
-bloc1 = osc.process(4410)
-bloc2 = osc.process(4410)
-junts = np.concatenate([bloc1, bloc2])
+blocs = []
+for i in range(200):
+    blocs.append(osc.process(512))
+junts = np.concatenate(blocs)
 ```
-- Mateixos dos blocs d'abans, ara amb `process()` — escoltar la diferència
-- 🎤 *Hauria de sonar com una ona contínua, sense salt de fase*
-
+- El que farà el callback: blocs de mostres, un rere l'altre
+- 🎤 *Ha de sonar continu, igual que a la S8: la fase és la mateixa; ha canviat la interfície*
 ---
 
 ### Diapositiva 8 — Control rate: la idea real (en un motor DSP)
