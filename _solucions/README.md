@@ -20,7 +20,7 @@ i s'executa de forma autònoma (sense necessitat de micròfon, altaveu ni Colab)
 | S06 — Estructura MIDI | `notebook.ipynb` | — | — | ⏳ |
 | S07 — Seqüenciador | `notebook.ipynb` | — | — | ⏳ |
 | S08 — Oscil·ladors/Classes | `notebook.ipynb` | — | — | ⏳ |
-| S09 — FM Synth | `assignment.py` + `challenges.md` | — | — | ⏳ |
+| S09 — FM Synth | `notebook.ipynb` + `assignment.py` | `S09_fm_synth/solucio.ipynb` + `solucio.py` + `S09_challenges_solucio.py` | 1–6, A–E | ✅ |
 | S10 — Consolidació | `assignment.py` + `challenges.md` | — | — | ⏳ |
 | S11 — FFT i features | `notebook.ipynb` + `challenges.md` | — | — | ⏳ |
 | S12 — Classificador | `notebook.ipynb` + `challenges.md` | — | — | ⏳ |

@@ -75,3 +75,15 @@
 - [ ] Penjar `cheat_sheet.md` com a Google Doc
 - [ ] Provar `exemples.py` localment, incloent els dos gràfics de profiling (es desen com a PNG al directori de treball)
 - [ ] Confirmar quin és l'ordre de magnitud real del profiling vectoritzat/sample-by-sample a l'ordinador de l'aula (al contenidor de desenvolupament surt ~12-20x; pot variar segons maquinari)
+
+### ⚠️ Revisió obligada per l'arrencada nova de la S09 (nov. 2026) — abans d'impartir la S10
+
+La S09 s'ha redissenyat (vegeu `sessio09_fm_synth/guia.md`). Aquesta sessió encara és la versió anterior i cal adaptar-la:
+
+- [ ] **Envelope amb clics:** la còpia d'`assignment.py` (i de `exemples.py`) és la versió antiga, que deixa una mostra a 0 en cada canvi d'estat (`continue`). Substituir-la per l'`Envelope` per increments de la S09.
+- [ ] **El Challenge 1 ("FM mostra a mostra") ja és contingut de la S09** (`process_freqs`). Treure'l o convertir-lo en la versió vectoritzada (`np.cumsum`).
+- [ ] **Profiling:** fer-lo sobre el `process_freqs` que han escrit els alumnes (bucle mostra a mostra, ~24× més lent que `process` al contenidor; verificat) i presentar `np.cumsum` com a millora mesurada. El pendent "aliasing per sota-mostreig del modulador" ja està resolt a la S09 (Part 2); aquí només cal recordar-lo.
+- [ ] **MIDI amb teclat real** (mogut des de la S09): fer-lo el context del kit de percussió (36 = kick, 42 = hi-hat disparats des d'un port, `rtmidi2` + `mido.Message.from_bytes`, ports per índex).
+- [ ] **signalflow** (mogut des de la S09): fusionar el tast de la S09 amb el tast ampliat d'aquí en un sol bloc de ~25'. Les instruccions d'instal·lació són ara a `recursos/challenges.md` (Annex signalflow).
+- [ ] **Regla de tasques:** revisar el repte del kit perquè cap TODO doni el codi a l'enunciat ni copiï un exemple (què, no com; variacions de paràmetres; una intervenció estructural amb efecte audible).
+- [ ] Els alumnes arriben amb `Oscillator._ona`, `process_freqs`, `Envelope` amb `_pas` i `VeuFM`: reaprofitar-los en lloc de redonar classes noves.

@@ -1,189 +1,88 @@
 # Slides — Bloc 5b, Sessió 9
-### Arquitectura UGen, control rate (vibrato), FM synthesis (timbre), integració temps real + MIDI
+### De la FM que no ho és a la FM de debò
 
-> **Instruccions de muntatge:** Mateix estil. Temps estimat: ~20 min (coincidint amb el bloc "Mini-teoria" de `guia.md`, 0:08–0:28). Sessió DENSA: aquestes diapositives cobreixen la teoria i una primera passada de cada demo; l'aprofundiment pràctic de cada demo es fa després amb `exemples.py` (Thonny), no cal allargar-se aquí en cada execució.
+> **Instruccions de muntatge:** 8 diapositives curtes, **intercalades** amb el notebook (no és un bloc de teoria). Cada diapositiva es mostra just abans de la part del notebook corresponent i dura 1-3 minuts. La resta del temps es projecta el notebook. Abans de cada execució important, predicció oral (🎤).
 
 ---
 
 ### Diapositiva 1 — Portada
-**Bloc 5 — Síntesi sonora (II)**
-*Arquitectura UGen, vibrato, FM, MIDI en temps real*
+**Bloc 5 — Síntesi (II)**
+*De la FM que no ho és a la FM de debò*
+- Avui: el midterm (20'), i després construireu una veu FM i la tocareu en temps real
 
 ---
 
-### Diapositiva 2 — On érem (Sessió 8)
-```python
-osc.generate(duration)        # un tros de `duration` segons, amb self._phase: sense salts
-env.generate(note_duration)   # tota la corba ADSR, sabent la durada per endavant
-```
-- La fase ja viu dins l'objecte: tros a tros, sense brunzit
-- Però tot es demana en **segons**, i l'envolvent necessita saber la durada
-
----
-
-### Diapositiva 3 — El problema d'avui: el temps real
+### Diapositiva 2 — El callback parla en mostres (abans de la Part 1)
 ```python
 def callback(outdata, frames, time_info, status):
-    outdata[:, 0] = ...    # em demanen `frames` MOSTRES, ara mateix
+    outdata[:, 0] = ...      # em demanen `frames` MOSTRES, ara
 ```
-- El callback parla en **mostres**, no en segons
-- I no sap quan arribarà el `note_off`: l'envolvent no pot calcular la corba sencera
-- 🎤 *Pregunta: com hauria de ser un mètode pensat per a això?*
-
----
-
-### Diapositiva 4 — La pregunta clau
-- I si li demanéssim "dona'm les **N mostres següents**, i recorda on et quedaves"?
-- Calen dues coses: (1) un mètode pensat per blocs, en mostres; (2) estat que persisteixi entre crides (la fase ja el té; l'envolvent l'haurà de tenir)
-- I el **mateix nom** per a tots els components — la idea de `generate()` a la S8, ara convertida en conveni
-
----
-
-### Diapositiva 5 — L'arquetip UGen
 ```python
-def process(self, n_samples):
-    ...
-    self._phase = ...   # es guarda per a la PROPERA crida
-    return out
+osc.generate(duration)       # S08: en segons
+osc.process(n_samples)       # avui: en mostres, el que demana el callback
 ```
-- `process(n_samples) -> array`, amb `self._phase` persistent
-- "UGen" (*unit generator*): interfície comuna per a qualsevol component d'un sintetitzador modular
+- Mateixa fase (`self._phase`), mateix so: només canvia **la pregunta** que li fem
+- 🎤 *Si `generate` i `process` fan el mateix `if/elif`... on arreglaríeu un error de la dent de serra?*
 
 ---
 
-### Diapositiva 6 — Connexió amb Max/Pd
-- Un patch és exactament això: objectes que reben/envien blocs de senyal contínuament, cadascun amb el seu propi estat
-- `process()` és el "cable" entre objectes, en codi
-- **Nota de disseny:** `Oscillator`, `LFO`, `Envelope` comparteixen `process()` per CONVENI, sense herència formal — el grup només té TP1 com a base d'OOP
-
----
-
-### Diapositiva 7 — Demo en directe: blocs de 512 mostres
-```python
-osc = Oscillator(freq=440)
-blocs = []
-for i in range(200):
-    blocs.append(osc.process(512))
-junts = np.concatenate(blocs)
-```
-- El que farà el callback: blocs de mostres, un rere l'altre
-- 🎤 *Ha de sonar continu, igual que a la S8: la fase és la mateixa; ha canviat la interfície*
----
-
-### Diapositiva 8 — Control rate: la idea real (en un motor DSP)
-- Un generador de control (LFO, envolupant) calcula els seus propis valors a una freqüència molt inferior a la d'àudio
-- Exemple: 100-200 valors/segon, en lloc dels 44100/s que calen per al so directe
-- El paràmetre que controla (vibrato, tremolo...) no necessita més resolució que aquesta
-
----
-
-### Diapositiva 9 — ⚠️ El nostre LFO és un híbrid pedagògic
-```python
-class LFO:
-    # MATEIXA lògica que Oscillator — calcula a 44100Hz
-    # NO genera realment menys valors
-    ...
-```
-- Per simplicitat, `LFO` reutilitza exactament el codi d'`Oscillator`
-- "Fingim" control rate llegint només l'última mostra de cada bloc (`lfo_out[-1]`)
-- Important dir-ho explícitament: el codi NO fa el que fa un generador de control real
-
----
-
-### Diapositiva 10 — Vibrato: per què l'híbrid funciona igualment
-```python
-lfo_out = lfo.process(n)
-osc.freq = base_freq + depth * lfo_out[-1]
-sortida[i:i+n] = osc.process(n)
-```
-- El LFO es mou lent (5Hz) — el seu valor amb prou feines canvia dins un bloc
-- Llegir-ne només 1 valor/bloc NO perd informació rellevant (NO és estalvi de CPU — calculem el bloc sencer igualment)
-- Referència real: el Yamaha DX7 té un LFO global enrutable a vibrato (pitch) i/o tremolo (amplitud)
-
----
-
-### Diapositiva 11 — Demo en directe: vibrato
-- Escoltar la mateixa nota, amb i sense vibrato (`depth=0` vs. `depth=6`)
-- 🎤 *Pregunta: què sents? És "la mateixa nota" ondulant, o un timbre nou?*
-- Resposta esperada: la mateixa nota, ondulant suaument
-
----
-
-### Diapositiva 12 — FM synthesis: i si el modulador es mou ràpid?
-- Mateix patró de codi que el vibrato — un `process()` alimenta el paràmetre d'un altre
-- Però ara: modulador a freqüència d'àudio (80Hz), no de control
-- Llegir-lo només 1 cop/bloc ja NO és segur — introdueix sota-mostreig/aliasing real
-
----
-
-### Diapositiva 13 — FM: el mateix patró, motor diferent
-```python
-mod_out = modulator.process(n)
-carrier.freq = carrier_freq + I * mod_out[-1]
-sortida[i:i+n] = carrier.process(n)
-```
-- `I` = índex de modulació (notació estàndard: Chowning, DX7) — no `beta`
-- Literalment el mateix codi que el vibrato — només canvia `mod_freq` (ara audio rate) i la magnitud d'`I`
-- ⚠️ Simplificació: `carrier.freq` s'actualitza 1 cop/bloc, no mostra a mostra — artefactes coneguts (Challenge: versió correcta)
-
----
-
-### Diapositiva 14 — Demo en directe: FM
-- Escoltar amb `I` petit vs. `I` gran
-- 🎤 *Pregunta: encara reconeixes "la mateixa nota"?*
-- Resposta esperada: no — és un timbre nou, no vibrato
-
----
-
-### Diapositiva 15 — Vibrato vs. FM: la mateixa eina, dos resultats
-| | Modulador | Amplada de banda | Es percep com |
+### Diapositiva 3 — Vibrato vs. FM: la mateixa idea (abans de la Part 2)
+| | Modulador | Excursió | Es percep com |
 |---|---|---|---|
-| Vibrato | 5Hz (lent) | ~20 Hz | la mateixa nota, ondulant |
-| FM | 80Hz (audio) | ~480 Hz | un timbre nou |
-- El que distingeix "control" de "timbre" no és si el senyal "és" d'un tipus o l'altre — és si la freqüència del modulador permet llegir-lo a baixa resolució sense perdre informació
+| Vibrato | 5 Hz | 6 Hz | la mateixa nota, ondulant |
+| FM (Chowning, 1973; DX7, 1983) | **80 Hz** | **200 Hz** | ? |
+- El vostre `vibrato()` ja ho fa: només cal canviar els números
+- 🎤 *Votació abans d'escoltar: timbre metàl·lic nou / vibrato molt ràpid / una altra cosa?*
 
 ---
 
-### Diapositiva 16 — Envelope, també redissenyada
-- `generate(note_duration)` (S8) necessitava saber la durada per endavant
-- En temps real no ho sabem — calen `note_on()` / `note_off()` + un `stage` intern (`'idle'|'attack'|'decay'|'sustain'|'release'`)
-- `note_on()` dispara l'Attack; `note_off()` dispara el Release, sigui quin sigui el moment
-
----
-
-### Diapositiva 17 — Tot junt: el callback
+### Diapositiva 4 — Què ha passat? (després del paper, abans de la Part 3)
+- Mirem el modulador **86 cops per segon** (un cop per bloc de 512)
+- Un senyal de 80 Hz mirat 86 cops per segon sembla un senyal de **6 Hz** → la sirena
+- És l'**aliasing** de la Sessió 2, aplicat al modulador
+- La idea era bona; l'estructura del codi, no: el portador ha de canviar de freqüència **a cada mostra**
 ```python
-def synth_callback(outdata, frames, time, status):
-    wave = synth_osc.process(frames)
-    env_curve = synth_env.process(frames)
-    outdata[:, 0] = (wave * env_curve).astype('float32')
+osc.process(n)              # una freqüència per a tot el bloc
+osc.process_freqs(freqs)    # una freqüència per a CADA mostra (freqs: array)
 ```
-- Mateix patró de callback que la Sessió 5 (`sd.OutputStream`)
-- Ara alimentat per les nostres classes UGen, disparades per MIDI (`note_on`/`note_off`)
 
 ---
 
-### Diapositiva 18 — Demo: teclat MIDI en directe (o simulació)
-- Tocar el sintetitzador propi en temps real amb un controlador MIDI connectat
-- Sense teclat a l'aula: seqüència de notes programada (mateix patró, sense port MIDI físic)
+### Diapositiva 5 — L'índex de modulació (Part 3)
+- Chowning (i el DX7) no donen l'excursió en Hz, sinó l'**índex** `I`, sense unitats:
+
+  **excursió (Hz) = I × freqüència del modulador**
+
+- 200 Hz d'excursió amb un modulador de 80 Hz → **I = 2,5**
+- Els parcials apareixen a **portador ± k × modulador**; com més `I`, més parcials
+- 🎤 *Abans d'escoltar la versió nova: on esperes veure les línies de l'espectre? (440, 360, 520, …)*
 
 ---
 
-### Diapositiva 19 — Tast de signalflow
-```python
-I = 200
-modulator = SineOscillator(80) * I
-carrier = SineOscillator(440 + modulator)
-carrier.play()
+### Diapositiva 6 — Una envolvent que recorda on és (Part 4)
 ```
-- Mateixa FM, en 3 línies — i sense els artefactes de la nostra simplificació per blocs
-- "Vosaltres ja sabeu què hi ha a dins"
-- Distingeix `Oscillator` de `LFO` com a classes separades — la distinció que hem treballat avui, ja integrada a la llibreria
-- NO és exercici avui — Challenge opcional si es vol instal·lar i provar de debò (funciona bé en Mac Apple Silicon, a diferència d'altres opcions més antigues)
+          note_on                  note_off
+ idle ──────────► attack ──► decay ──► sustain ──────────► release ──► idle
+                  (puja)    (baixa)   (s'hi queda)         (baixa des d'on sigui)
+```
+- `note_on()` / `note_off()` **només canvien l'estat** (`self.stage`)
+- `process(n)` fa avançar la corba mostra a mostra: un `if/elif` per estat
+- 🎤 *Attack de 0,01 s, blocs de 512: a quin bloc passa a decay?*
 
 ---
 
-### Diapositiva 20 — Connexió amb TP1 i preview
-- Recuperem el fil de classes (poc treballades a TP1) amb un cas d'ús real: estat persistent entre crides
-- Connexió amb Sessió 5: "el buffer global de l'eco hauria estat millor com a classe" — avui ho fem amb tot un sintetitzador
-- **Sessió 10:** consolidació de tot el Bloc 5 (Oscillator + Envelope + UGen + vibrato + FM + MIDI temps real), amb un mini-repte més ampli
+### Diapositiva 7 — `VeuFM`: una veu, no un sintetitzador (Part 5)
+- 🎤 *Quines classes ja teniu? Quantes de cada en necessita una veu FM?*
+- Configuració (es tria un cop): `ratio` (C:M), `I_max`, ADSR
+- Estat (canvia a cada nota): la nota, el guany… i, a dins, les fases i l'`stage`
+- **El detall de Chowning:** `I = I_max × envolvent` → brillant a l'atac, fosc a la cua (metalls, campanes)
+- `ratio` enter → afinat; `ratio` 1,41 → campana; `ratio` 3,5 → 🎤 *quina nota sents?*
+
+---
+
+### Diapositiva 8 — Tancament i S10
+- Avui heu canviat **l'estructura** del codi, no només els números:
+  - `_ona`: un sol lloc per a les formes d'ona
+  - `process_freqs`: una freqüència per mostra → FM de debò
+  - `VeuFM`: una classe feta de les vostres classes
+- **Sessió 10:** quant costa el vostre bucle mostra a mostra? (el mesurarem i l'accelerarem), teclat MIDI real, i `signalflow`: la mateixa idea, feta per professionals

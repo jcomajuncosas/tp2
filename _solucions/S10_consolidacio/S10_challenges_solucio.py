@@ -222,7 +222,7 @@ print("Challenge 3 — Exemples oficials de signalflow:")
 print("  https://github.com/ideoforms/signalflow/tree/master/examples")
 print("  Instal·lació: python3 -m venv venv --copies && pip install signalflow")
 print("  Veure guia troubleshooting completa a:")
-print("  05_sintesi/sessio09_fm_synth/recursos/challenges.md (Challenge 2)")
+print("  05_sintesi/sessio10_consolidacio/recursos/challenges.md (Annex signalflow)")
 print()
 print("Challenge 4 — Cor de string ensemble amb signalflow (codi de referència):")
 print("""
