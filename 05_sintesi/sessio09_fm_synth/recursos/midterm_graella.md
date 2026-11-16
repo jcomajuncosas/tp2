@@ -15,9 +15,9 @@
 **1b**
 ```
 [0. 0. 1. 1. 1. 0. 0. 3.]
-6.0 8
+3.0 8
 ```
-Detalls que diagnostiquen: `2:5` inclou el 2 i exclou el 5; `-1` és l'últim; NumPy imprimeix floats (`0.`, `6.0`).
+Detalls que diagnostiquen: `2:5` inclou el 2 i exclou el 5; `-1` és l'últim; NumPy imprimeix floats (`0.`, `3.0`).
 
 **1c**
 ```
@@ -76,7 +76,7 @@ Puntuació per ítem: **2** = correcte · **1** = idea bona amb error menor · *
 |---|---|---|
 | **B** | Model de bucle | `range(5)` → 1…5; `%` mal entès; índex fora de rang |
 | **T** | Talls i índexs | `2:5` incloent el 5; `-1` no entès |
-| **N** | NumPy | no sap que `np.zeros` dona floats; `np.sum` / `len` |
+| **N** | NumPy | no sap que `np.zeros` dona floats; `np.max` / `len` |
 | **C** | Condicionals | més d'una branca per volta; ordre de l'`elif` |
 | **E** | Estat i objectes | instàncies que comparteixen valor; `b.pas = 1` afecta `a`; el `return` canvia l'estat |
 | **L** | Atribut vs. variable local | 2b: no veu que falta `self.`; diu que falla en crear l'objecte |

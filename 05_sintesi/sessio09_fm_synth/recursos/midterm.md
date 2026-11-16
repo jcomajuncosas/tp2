@@ -31,7 +31,7 @@ a = np.zeros(8)
 a[2:5] = 1
 a[-1] = 3
 print(a)
-print(np.sum(a), len(a))
+print(np.max(a), len(a))
 ```
 
 <br><br><br>
