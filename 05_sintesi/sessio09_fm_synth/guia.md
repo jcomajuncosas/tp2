@@ -1,4 +1,4 @@
-# Sessió 9 — Bloc 5b: De la FM que no ho és a la FM de debò
+# Sessió 9 — Bloc 5b: Síntesi FM i envolvents amb estat
 
 **Bloc temàtic:** 05_sintesi
 **Tipus de sessió:** Midterm de diagnòstic + workshop intercalat. Cicles curts de mini-explicació → predicció → picar → escoltar junts. No hi ha bloc de teoria llarg ni demo per mirar: el notebook dels alumnes **és** la demo (el docent el projecta i avança amb ells).

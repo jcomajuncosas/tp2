@@ -41,7 +41,7 @@ TP2_2627/
 | 6 | Bloc 4a — Estructura MIDI, mido, notes/velocity/canals | 04_midi | sessio06_estructura_midi |
 | 7 | Bloc 4b — pretty_midi, arpegiador, timing, MidiSynth | 04_midi | sessio07_sequenciador |
 | 8 | Bloc 5a — Oscillator, Envelope (ADSR), SamplePlayer, MIDI→freq | 05_sintesi | sessio08_oscil_ladors_classes |
-| 9 | Bloc 5b — process(n), aliasing del modulador, FM de debò, envolvent amb estat, VeuFM en temps real | 05_sintesi | sessio09_fm_synth |
+| 9 | Bloc 5b — Síntesi FM i envolvents amb estat | 05_sintesi | sessio09_fm_synth |
 | 10 | Bloc 5c — Consolidació: kit de percussió sintètica (Kick+Noise+MIDI) | 05_sintesi | sessio10_consolidacio |
 | 11 | Bloc 6 — FFT pràctic, extracció de features (centroid, MFCC, ZCR) | 06_analisi_ml | sessio11_fft_features |
 | 12 | Bloc 7 — Classificador KNN/decision tree/SVM, fronteres de decisió | 06_analisi_ml | sessio12_classificador |

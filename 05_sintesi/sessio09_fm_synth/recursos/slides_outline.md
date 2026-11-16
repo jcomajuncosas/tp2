@@ -1,5 +1,5 @@
 # Slides — Bloc 5b, Sessió 9
-### De la FM que no ho és a la FM de debò
+### Síntesi FM i envolvents amb estat
 
 > **Instruccions de muntatge:** 8 diapositives curtes, **intercalades** amb el notebook (no és un bloc de teoria). Cada diapositiva es mostra just abans de la part del notebook corresponent i dura 1-3 minuts. La resta del temps es projecta el notebook. Abans de cada execució important, predicció oral (🎤).
 
@@ -7,7 +7,7 @@
 
 ### Diapositiva 1 — Portada
 **Bloc 5 — Síntesi (II)**
-*De la FM que no ho és a la FM de debò*
+*Síntesi FM i envolvents amb estat*
 - Avui: el midterm (20'), i després construireu una veu FM i la tocareu en temps real
 
 ---

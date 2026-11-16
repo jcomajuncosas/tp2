@@ -1,5 +1,5 @@
 # Cheat sheet — Sessió 9
-### `process(n)`, aliasing del modulador, FM de debò, envolvent amb estat, `VeuFM`
+### Síntesi FM i envolvents amb estat
 
 ---
 
