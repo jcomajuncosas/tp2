@@ -140,7 +140,9 @@ def brillantor(x):
 # =============================================================================
 # Challenge 1 — Feedback
 #   Com el DX7 (Tomisawa): la FASE de cada mostra es desplaça segons
-#   l'ÚLTIMA mostra generada:
+#   l'ÚLTIMA mostra generada. Atenció: això és PM (modulació de fase), no la
+#   FM de la sessió. Amb feedback, la versió en freqüència es comporta de
+#   manera irregular (la freqüència mitjana es desplaça); per això el DX7 fa PM.
 #     sortida[k] = sin(fase[k] + feedback × sortida[k-1])
 #   No es pot vectoritzar: cada mostra necessita l'anterior. Per això el
 #   bucle mostra a mostra és l'única manera.

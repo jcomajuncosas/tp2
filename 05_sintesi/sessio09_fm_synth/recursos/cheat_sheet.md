@@ -57,6 +57,8 @@ sortida = portador.process_freqs(freqs)
 | 1,41 (irracional) | inharmònics | campana, metall percudit |
 | 3,5 | múltiples de la **meitat** de la nota | sona una octava més greu |
 
+**FM o PM?** El que fem és **FM**: modulem la freqüència, i la fase n'és l'acumulació (`fase += 2π·f/sr`). El DX7, i gairebé tots els "FM" digitals, fan en realitat **PM** (modulació de fase): la fase del portador avança a ritme constant i el modulador s'hi **suma** directament, `sin(fase_portador + I·sin(fase_modulador))`. Amb **un sol modulador sinusoidal sonen igual**: el mateix espectre, i només canvia un desfasament de 90° del modulador. Es diferencien amb feedback, amb piles d'operadors o quan el modulador té component continu: aleshores la FM desafina el portador i la PM no.
+
 ## 5. `Envelope` amb estat (temps real)
 
 ```
