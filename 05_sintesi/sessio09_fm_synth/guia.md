@@ -115,6 +115,7 @@ Full: `recursos/midterm.md` (imprimir-ne un per alumne; `build.sh` en genera el 
 - `recursos/midterm.md` — full del midterm (privat: només imprès)
 - `recursos/midterm_graella.md` — solucions verificades i graella (docent)
 - `recursos/full_aliasing.pdf` — full en paper de la Part 2 (privat: només imprès); es regenera amb `recursos/genera_full_aliasing.py`
+- `recursos/full_aliasing_solucions.md` — solucions del full en paper (docent)
 - Solucions: `_solucions/S09_fm_synth/solucio.ipynb` (notebook), `solucio.py` (Thonny), `S09_challenges_solucio.py`
 
 Retirats en el redisseny: `recursos/exemples.py` i `recursos/patches_bloc5b.ipynb` (la demo ara és el notebook), `recursos/warmup_quiz.md` (el midterm ocupa el seu lloc), `recursos/challenges.md` (els challenges són al notebook i a `assignment.py`; signalflow → S10).
