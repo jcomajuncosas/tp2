@@ -103,7 +103,7 @@ echo "▸ Aplicant llista blanca…"
 INC=(); for p in "${WHITELIST[@]}"; do INC+=(--include="$p"); done
 rsync -a --prune-empty-dirs \
   --exclude='.git' --exclude='.DS_Store' --exclude='__pycache__' \
-  --exclude='*.docx' --exclude='_solucions' \
+  --exclude='*.docx' --exclude='_solucions' --exclude='eines' \
   --include='*/' "${INC[@]}" --exclude='*' \
   "$WORK/private/" "$WORK/filtered/"
 

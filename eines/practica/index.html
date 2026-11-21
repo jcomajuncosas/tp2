@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pràctica de Python</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<header>
+  <h1 id="titol">Pràctica de Python</h1>
+  <div id="usuari"></div>
+</header>
+
+<main>
+  <aside id="mapa" aria-label="Conceptes">
+    <h2>Conceptes</h2>
+    <div id="llista-conceptes"></div>
+    <p class="llegenda">●●● = encerts seguits · ✓ = dominat</p>
+    <button id="btn-auto" class="secundari">Tria'm l'exercici</button>
+  </aside>
+
+  <section id="zona">
+    <div id="pantalla-codi" class="targeta amagat">
+      <h2>Benvingut/da</h2>
+      <p>Escriu el codi personal que t'ha donat el professor (el trobaràs al Classroom).</p>
+      <input id="input-codi" autocomplete="off" placeholder="p. ex. K7M2QX">
+      <button id="btn-codi">Comença</button>
+    </div>
+
+    <div id="carregant" class="targeta">
+      <p id="text-carregant">Carregant Python al navegador… (la primera vegada pot trigar uns segons)</p>
+    </div>
+
+    <div id="exercici" class="targeta amagat">
+      <div class="capcalera-ex">
+        <span id="ex-concepte" class="etiqueta"></span>
+        <span id="ex-tipus" class="etiqueta tipus"></span>
+      </div>
+      <div id="ex-enunciat" class="enunciat"></div>
+      <pre id="ex-codi" class="codi amagat"></pre>
+
+      <div id="resposta-predir" class="amagat">
+        <label for="input-sortida">La sortida (tal com apareixeria a la pantalla):</label>
+        <textarea id="input-sortida" class="editor petit" spellcheck="false"></textarea>
+      </div>
+
+      <div id="resposta-escriure" class="amagat">
+        <label for="input-codi-alumne">El teu codi:</label>
+        <textarea id="input-codi-alumne" class="editor" spellcheck="false"></textarea>
+        <p class="nota">Tab = 4 espais · la tecla Enter manté la indentació.</p>
+      </div>
+
+      <div id="resposta-ordenar" class="amagat">
+        <p class="nota">Clica les línies en l'ordre correcte. Clica una línia de la solució per tornar-la a dalt.</p>
+        <div class="columnes">
+          <div><h3>Línies</h3><ol id="ord-origen" class="linies"></ol></div>
+          <div><h3>La teva solució</h3><ol id="ord-desti" class="linies desti"></ol></div>
+        </div>
+      </div>
+
+      <div class="botons">
+        <button id="btn-comprova">Comprova</button>
+        <button id="btn-solucio" class="secundari amagat">Veure la solució</button>
+        <button id="btn-seguent" class="amagat">Següent ➜</button>
+      </div>
+      <div id="resultat" class="amagat"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="estat-envio"></span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
