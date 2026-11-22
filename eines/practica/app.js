@@ -71,8 +71,48 @@ function carregaEstat() {
   return { conceptes: {}, punts: 0, insignies: [] };
 }
 
-function desaEstat() {
+function desaEstat(senseMarcar) {
+  if (!senseMarcar) estat.actualitzat = Date.now();
   try { localStorage.setItem(clauEstat(), JSON.stringify(estat)); } catch (e) { /* res */ }
+}
+
+// El Sheet guarda l'últim estat de cada alumne: en entrar, es recupera el més recent
+// (el d'aquest navegador o el del Sheet), i així el progrés el segueix a qualsevol ordinador.
+async function sincronitzaEstat() {
+  if (!CFG.ENDPOINT) return;
+  $('text-carregant').textContent = 'Recuperant el teu progrés…';
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const r = await fetch(CFG.ENDPOINT + '?codi=' + encodeURIComponent(codiAlumne), { signal: ctrl.signal });
+    const d = await r.json();
+    if (!d.ok) {
+      $('estat-envio').textContent = d.error === 'codi desconegut'
+        ? 'Aquest codi no és a la llista: el progrés no es desarà. Comprova el codi amb el professor.'
+        : 'No s\'ha pogut recuperar el progrés (' + d.error + ').';
+      if (d.error === 'codi desconegut') {
+        $('usuari').insertAdjacentHTML('afterbegin', '<strong style="color:#a4332a">⚠ Codi desconegut</strong> · ');
+      }
+      return;
+    }
+    const remot = d.estat;
+    const local = estat.actualitzat || 0;
+    if (remot && (remot.actualitzat || 0) > local) {
+      estat = remot;
+      if (!estat.conceptes) estat.conceptes = {};
+      desaEstat(true);
+      $('estat-envio').textContent = 'Progrés recuperat (' + new Date(remot.actualitzat).toLocaleString() + ')';
+    } else if (local && (!remot || local > (remot.actualitzat || 0))) {
+      envia({ nomes_estat: true });             // aquest navegador en sap més: puja-ho
+      $('estat-envio').textContent = 'Progrés sincronitzat';
+    } else {
+      $('estat-envio').textContent = 'Progrés sincronitzat';
+    }
+  } catch (e) {
+    $('estat-envio').textContent = 'Sense connexió amb el registre: es fa servir el progrés d\'aquest ordinador.';
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 function ec(cid) {
@@ -453,10 +493,11 @@ function envia(dades) {
   if (!CFG.ENDPOINT) return;
   dades.codi = codiAlumne;
   dades.ts = new Date().toISOString();
+  dades.estat = estat;
   try {
     fetch(CFG.ENDPOINT, { method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(dades) });
-    $('estat-envio').textContent = 'Progrés desat (' + new Date().toLocaleTimeString() + ')';
+    if (!dades.nomes_estat) $('estat-envio').textContent = 'Progrés desat (' + new Date().toLocaleTimeString() + ')';
   } catch (e) { /* sense xarxa: el progrés local es manté */ }
 }
 
@@ -488,10 +529,17 @@ function editorAmbIndentacio(ta) {
 async function arrenca() {
   document.title = CFG.TITOL;
   $('titol').textContent = CFG.TITOL;
-  $('usuari').textContent = 'Codi: ' + codiAlumne;
+  $('usuari').innerHTML = 'Codi: ' + escapa(codiAlumne) +
+    ' · <a href="#" id="canvia-usuari" title="Si l\'ordinador és compartit">Canvia d\'usuari</a>';
+  $('canvia-usuari').onclick = (e) => {
+    e.preventDefault();
+    try { localStorage.removeItem('practica_py_codi'); } catch (err) { /* res */ }
+    location.href = location.pathname;
+  };
   estat = carregaEstat();
   amaga('pantalla-codi', true);
   amaga('carregant', false);
+  await sincronitzaEstat();
   try {
     cataleg = JSON.parse(await (workerPromesa || creaWorker()));
     blocs = (await (await fetch('blocs.json?v=' + CFG.VERSIO)).json()).blocs;

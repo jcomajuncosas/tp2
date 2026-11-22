@@ -15,6 +15,7 @@
 const PESTANYA_ALUMNES = 'Alumnes';
 const PESTANYA_LOG = 'Esdeveniments';
 const PESTANYA_PROGRES = 'Progrés';
+const PESTANYA_ESTAT = 'Estat';        // l'últim estat de cada alumne (JSON), per recuperar-lo a qualsevol ordinador
 const CAPCALERA_LOG = ['data', 'codi', 'nom', 'concepte', 'plantilla', 'tipus', 'correcte',
                        'intents', 'segons', 'ratxa', 'dominat', 'repàs', 'resposta'];
 
@@ -26,6 +27,9 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const nom = nomDe_(ss, d.codi);
     if (nom === null) return resposta_({ ok: false, error: 'codi desconegut' });
+
+    if (d.estat) desaEstat_(ss, d.codi, d.estat);
+    if (d.nomes_estat) return resposta_({ ok: true });
 
     const log = pestanya_(ss, PESTANYA_LOG, CAPCALERA_LOG);
     log.appendRow([new Date(d.ts || Date.now()), d.codi, nom, d.concepte, d.plantilla, d.tipus,
@@ -41,8 +45,37 @@ function doPost(e) {
   }
 }
 
-function doGet() {
-  return resposta_({ ok: true, servei: 'practica-python' });
+function doGet(e) {
+  const codi = e && e.parameter && e.parameter.codi;
+  if (!codi) return resposta_({ ok: true, servei: 'practica-python' });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (nomDe_(ss, codi) === null) return resposta_({ ok: false, error: 'codi desconegut' });
+  const sh = ss.getSheetByName(PESTANYA_ESTAT);
+  if (!sh || sh.getLastRow() < 2) return resposta_({ ok: true, estat: null });
+  const files = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  for (let i = 0; i < files.length; i++) {
+    if (String(files[i][0]).toUpperCase() === String(codi).toUpperCase()) {
+      return resposta_({ ok: true, estat: JSON.parse(files[i][2]) });
+    }
+  }
+  return resposta_({ ok: true, estat: null });
+}
+
+function desaEstat_(ss, codi, estat) {
+  const sh = pestanya_(ss, PESTANYA_ESTAT, ['codi', 'actualitzat', 'estat (JSON)']);
+  const json = JSON.stringify(estat);
+  const quan = new Date(estat.actualitzat || Date.now());
+  const n = sh.getLastRow() - 1;
+  if (n > 0) {
+    const codis = sh.getRange(2, 1, n, 1).getValues();
+    for (let i = 0; i < n; i++) {
+      if (codis[i][0] === codi) {
+        sh.getRange(i + 2, 2, 1, 2).setValues([[quan, json]]);
+        return;
+      }
+    }
+  }
+  sh.appendRow([codi, quan, json]);
 }
 
 function nomDe_(ss, codi) {

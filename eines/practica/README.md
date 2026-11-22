@@ -72,7 +72,7 @@ Genera `checkpoints/CP1_fulls.html` (un full per alumne: obre'l al navegador i i
    - *Qui hi té accés:* **Qualsevol usuari** (cal perquè l'alumne no ha d'iniciar sessió; el script rebutja qualsevol codi que no sigui a la pestanya `Alumnes`)
 6. Copia l'URL que acaba en `/exec` a `config.js` → `ENDPOINT`.
 
-Les pestanyes `Esdeveniments` (un registre de cada exercici, amb la resposta i els segons que hi ha dedicat) i `Progrés` (una fila per alumne i una columna per concepte: `✓` si l'ha dominat; si no, `ratxa · encerts/intents`) es creen soles.
+Les pestanyes `Estat` (l'últim progrés de cada alumne, per recuperar-lo des de qualsevol ordinador), `Esdeveniments` (un registre de cada exercici, amb la resposta i els segons que hi ha dedicat) i `Progrés` (una fila per alumne i una columna per concepte: `✓` si l'ha dominat; si no, `ratxa · encerts/intents`) es creen soles.
 
 ### 2. Servidor (cada vegada que canviï alguna cosa)
 
@@ -93,7 +93,7 @@ Hi ha dues opcions:
 - **Enllaç personal:** a cada alumne, en un comentari privat, la seva línia d'`enllacos.txt`. L'enllaç ja porta el codi (`?a=K7M2QX`) i el navegador el recorda.
 - **Enllaç comú + codi:** un material amb l'URL comú. Cada alumne hi escriu el seu codi la primera vegada.
 
-El progrés es desa al navegador (localStorage) i, a més, al Sheet. Si un alumne canvia d'ordinador, en aquest navegador comença el mapa de zero, però el registre del Sheet hi és sencer.
+El progrés es desa al navegador i també al Sheet (pestanya `Estat`, l'últim estat de cada alumne). En entrar, la web agafa el més recent dels dos, així que el progrés segueix l'alumne a qualsevol ordinador (casa, escola). En ordinadors compartits, l'enllaç «Canvia d'usuari» de la capçalera oblida el codi recordat; un enllaç personal (`?a=`) sempre mana sobre el codi recordat.
 
 ## Validar el banc (abans de cada desplegament)
 
