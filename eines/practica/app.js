@@ -95,6 +95,10 @@ async function sincronitzaEstat() {
       }
       return;
     }
+    if (d.nom) {
+      try { localStorage.setItem('practica_py_nom_' + codiAlumne, d.nom); } catch (e) { /* res */ }
+      pintaUsuari(d.nom);
+    }
     const remot = d.estat;
     const local = estat.actualitzat || 0;
     if (remot && (remot.actualitzat || 0) > local) {
@@ -529,13 +533,9 @@ function editorAmbIndentacio(ta) {
 async function arrenca() {
   document.title = CFG.TITOL;
   $('titol').textContent = CFG.TITOL;
-  $('usuari').innerHTML = 'Codi: ' + escapa(codiAlumne) +
-    ' · <a href="#" id="canvia-usuari" title="Si l\'ordinador és compartit">Canvia d\'usuari</a>';
-  $('canvia-usuari').onclick = (e) => {
-    e.preventDefault();
-    try { localStorage.removeItem('practica_py_codi'); } catch (err) { /* res */ }
-    location.href = location.pathname;
-  };
+  let nomGuardat = null;
+  try { nomGuardat = localStorage.getItem('practica_py_nom_' + codiAlumne); } catch (e) { /* res */ }
+  pintaUsuari(nomGuardat);
   estat = carregaEstat();
   amaga('pantalla-codi', true);
   amaga('carregant', false);
@@ -551,6 +551,20 @@ async function arrenca() {
   pintaMapa();
   pintaMarcador();
   nouExercici();
+}
+
+// Capçalera: el nom de l'alumne (si el Sheet el coneix), perquè en un ordinador
+// compartit ningú treballi sense adonar-se'n amb el codi d'un altre.
+function pintaUsuari(nom) {
+  $('usuari').innerHTML = (nom ? '<strong>' + escapa(nom) + '</strong> · ' : '') +
+    'Codi: ' + escapa(codiAlumne) +
+    ' · <a href="#" id="canvia-usuari" title="Si l\'ordinador és compartit">' +
+    (nom ? 'No ets tu? Canvia d\'usuari' : 'Canvia d\'usuari') + '</a>';
+  $('canvia-usuari').onclick = (e) => {
+    e.preventDefault();
+    try { localStorage.removeItem('practica_py_codi'); } catch (err) { /* res */ }
+    location.href = location.pathname;
+  };
 }
 
 function demanaCodi() {

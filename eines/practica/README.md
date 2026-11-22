@@ -93,7 +93,7 @@ Hi ha dues opcions:
 - **Enllaç personal:** a cada alumne, en un comentari privat, la seva línia d'`enllacos.txt`. L'enllaç ja porta el codi (`?a=K7M2QX`) i el navegador el recorda.
 - **Enllaç comú + codi:** un material amb l'URL comú. Cada alumne hi escriu el seu codi la primera vegada.
 
-El progrés es desa al navegador i també al Sheet (pestanya `Estat`, l'últim estat de cada alumne). En entrar, la web agafa el més recent dels dos, així que el progrés segueix l'alumne a qualsevol ordinador (casa, escola). En ordinadors compartits, l'enllaç «Canvia d'usuari» de la capçalera oblida el codi recordat; un enllaç personal (`?a=`) sempre mana sobre el codi recordat.
+El progrés es desa al navegador i també al Sheet (pestanya `Estat`, l'últim estat de cada alumne). En entrar, la web agafa el més recent dels dos, així que el progrés segueix l'alumne a qualsevol ordinador (casa, escola). La capçalera mostra el nom de l'alumne (de la pestanya `Alumnes`), perquè en un ordinador compartit ningú treballi amb el codi d'un altre sense adonar-se'n; l'enllaç «No ets tu? Canvia d'usuari» oblida el codi recordat; un enllaç personal (`?a=`) sempre mana sobre el codi recordat.
 
 ## Validar el banc (abans de cada desplegament)
 

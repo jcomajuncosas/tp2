@@ -100,3 +100,5 @@ footer { text-align: center; color: var(--suau); font-size: 0.75rem; padding: 0 
 .concepte.tancat { color: #a9abb0; cursor: default; }
 .concepte.tancat:hover { background: none; }
 .concepte.tancat:disabled { opacity: 1; cursor: default; }
+#usuari strong { color: var(--tinta); }
+#usuari a { color: var(--accent); }

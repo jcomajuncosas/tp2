@@ -49,16 +49,17 @@ function doGet(e) {
   const codi = e && e.parameter && e.parameter.codi;
   if (!codi) return resposta_({ ok: true, servei: 'practica-python' });
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (nomDe_(ss, codi) === null) return resposta_({ ok: false, error: 'codi desconegut' });
+  const nom = nomDe_(ss, codi);
+  if (nom === null) return resposta_({ ok: false, error: 'codi desconegut' });
   const sh = ss.getSheetByName(PESTANYA_ESTAT);
-  if (!sh || sh.getLastRow() < 2) return resposta_({ ok: true, estat: null });
+  if (!sh || sh.getLastRow() < 2) return resposta_({ ok: true, nom: nom, estat: null });
   const files = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
   for (let i = 0; i < files.length; i++) {
     if (String(files[i][0]).toUpperCase() === String(codi).toUpperCase()) {
-      return resposta_({ ok: true, estat: JSON.parse(files[i][2]) });
+      return resposta_({ ok: true, nom: nom, estat: JSON.parse(files[i][2]) });
     }
   }
-  return resposta_({ ok: true, estat: null });
+  return resposta_({ ok: true, nom: nom, estat: null });
 }
 
 function desaEstat_(ss, codi, estat) {
