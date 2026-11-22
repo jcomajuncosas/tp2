@@ -11,13 +11,43 @@ Bateries d'exercicis amb variants aleatòries i progrés individual per domini, 
 
 Ningú no pot impedir que facin servir IA a casa. Per això aquesta eina és de **pràctica formativa**, i els mínims es certifiquen a classe.
 
+## Blocs i calendari
+
+Els conceptes s'agrupen en tres blocs (`blocs.json`) que s'obren segons el calendari, canviant `BLOCS_OBERTS` a `config.js` (i `VERSIO`, perquè els navegadors no facin servir la còpia antiga):
+
+| Fase | `BLOCS_OBERTS` | Blocs oberts | Checkpoint en paper |
+|---|---|---|---|
+| Sessió 1 | 1 | Base de Python | — |
+| Sessió 2 | 2 | + Arrays i so | **CP1** (Base de Python) |
+| Sessió 3 | 3 | + Classes i estat | — |
+| Sessió 4 | 3 | (tots) | **CP2** (Arrays i so + Classes i estat) |
+| Dia d'exàmens | 3 | (tots) | Recuperació de les àrees no superades + prova oral |
+
+Dins d'un bloc obert, tots els conceptes són accessibles. L'eina proposa l'ordre, però l'alumne en pot triar un altre si s'encalla. Els blocs tancats es veuen en gris, amb un cadenat.
+
+## Checkpoints en paper
+
+```bash
+python3 genera_checkpoint.py CP1 codis.csv                                  # un full diferent per alumne
+python3 genera_checkpoint.py CP1 codis.csv --recuperacio --arees A,C        # variants noves, només aquestes àrees
+python3 genera_checkpoint.py CP1 codis.csv --recuperacio --nomes K7M2QX     # només aquest alumne
+```
+
+Genera `checkpoints/CP1_fulls.html` (un full per alumne: obre'l al navegador i imprimeix-lo) i `checkpoints/CP1_claus.html` (taula de recollida + clau de cada alumne). Necessita NumPy (el venv del curs ja el té).
+
+- **3 àrees per checkpoint, 2 exercicis per àrea:** un de "què imprimeix?" i un d'escriure o ordenar, de conceptes diferents. Una àrea se supera si tots dos són correctes. A la recuperació només es repeteixen les àrees no superades, amb variants noves.
+- **Cada alumne té una variant diferent,** que depèn del seu codi: copiar del del costat no serveix de res. Tornar a executar l'script dona exactament els mateixos fulls.
+- Les àrees i els minuts són a `blocs.json`.
+
 ## Estructura
 
 | Fitxer | Què és |
 |---|---|
 | `index.html`, `style.css`, `app.js` | la pàgina |
 | `worker.js` | executa Python (Pyodide) en un fil a part; si el codi de l'alumne es penja, es mata i es reinicia |
-| `config.js` | **l'únic fitxer que cal tocar**: URL d'Apps Script, bancs actius, ratxa de domini… |
+| `config.js` | **l'únic fitxer que cal tocar**: URL d'Apps Script, blocs oberts, ratxa de domini… |
+| `blocs.json` | blocs de conceptes i àrees dels checkpoints (eina i paper) |
+| `genera_checkpoint.py` | fulls en paper per alumne + claus de correcció |
 | `py/motor.py` | genera variants i corregeix (el mateix codi a Pyodide i a CPython) |
 | `py/banc_tp1.py`, `py/banc_tp2.py` | les plantilles d'exercici |
 | `validar_banc.py` | valida tot el banc amb CPython (vegeu més avall) |
@@ -50,7 +80,7 @@ Les pestanyes `Esdeveniments` (un registre de cada exercici, amb la resposta i e
 
 ```bash
 cd ~/TP2_2627/eines/practica
-rsync -av --delete --exclude '__pycache__' --exclude 'codis.csv' --exclude 'enllacos.txt' \
+rsync -av --delete --exclude '__pycache__' --exclude 'codis.csv' --exclude 'enllacos.txt' --exclude 'checkpoints' \
   ./ root@5.180.173.59:/var/www/html/apps/practica-tp2/
 ```
 URL: <https://moodle22569.hostkey.in/apps/practica-tp2/>

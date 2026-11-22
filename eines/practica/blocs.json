@@ -1,0 +1,43 @@
+{
+  "_nota": "Font única per a l'eina web (quins conceptes hi ha a cada bloc) i per a genera_checkpoint.py (àrees de cada checkpoint). Quants blocs estan oberts es tria a config.js (BLOCS_OBERTS).",
+  "blocs": [
+    {
+      "id": 1,
+      "nom": "Base de Python",
+      "conceptes": ["t1_aritmetica", "t1_index", "t1_talls", "t1_bucles", "t1_acumuladors",
+                    "t1_condicionals", "t1_funcions", "t1_llistes", "t1_tuples"]
+    },
+    {
+      "id": 2,
+      "nom": "Arrays i so",
+      "conceptes": ["t2_numpy", "t2_vector", "t2_mostres", "t2_bucle_mostres", "t2_blocs", "t2_circular"]
+    },
+    {
+      "id": 3,
+      "nom": "Classes i estat",
+      "conceptes": ["t2_classes", "t2_objectes", "t2_callback"]
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP1",
+      "titol": "Checkpoint 1 — Base de Python",
+      "minuts": 20,
+      "arees": [
+        {"id": "A", "nom": "Operadors, índexs i talls", "conceptes": ["t1_aritmetica", "t1_index", "t1_talls"]},
+        {"id": "B", "nom": "Bucles, condicionals i acumuladors", "conceptes": ["t1_bucles", "t1_condicionals", "t1_acumuladors"]},
+        {"id": "C", "nom": "Funcions i llistes", "conceptes": ["t1_funcions", "t1_llistes", "t1_tuples"]}
+      ]
+    },
+    {
+      "id": "CP2",
+      "titol": "Checkpoint 2 — Python per a àudio",
+      "minuts": 25,
+      "arees": [
+        {"id": "A", "nom": "Arrays i mostres", "conceptes": ["t2_numpy", "t2_vector", "t2_mostres"]},
+        {"id": "B", "nom": "Recórrer i trossejar el so", "conceptes": ["t2_bucle_mostres", "t2_blocs", "t2_circular"]},
+        {"id": "C", "nom": "Classes i estat", "conceptes": ["t2_classes", "t2_objectes", "t2_callback"]}
+      ]
+    }
+  ]
+}

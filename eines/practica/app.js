@@ -10,6 +10,7 @@ const NOM_TIPUS = { predir: 'Què imprimeix?', escriure: 'Escriu el codi', orden
 const $ = (id) => document.getElementById(id);
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 let cataleg = null;            // {conceptes, plantilles}
+let blocs = [];                // de blocs.json
 let estat = null;              // progrés de l'alumne
 let codiAlumne = null;
 let item = null;               // exercici actual
@@ -79,8 +80,23 @@ function ec(cid) {
   return estat.conceptes[cid];
 }
 
+function blocDe(cid) {
+  for (const b of blocs) if (b.conceptes.includes(cid)) return b;
+  return null;
+}
+
+function blocObert(b) { return b && b.id <= CFG.BLOCS_OBERTS; }
+
 function conceptesActius() {
-  return cataleg.conceptes.filter(c => CFG.BANCS.includes(c.banc));
+  // conceptes dels bancs triats i dels blocs oberts, en l'ordre de blocs.json
+  const ordre = [];
+  for (const b of blocs) if (blocObert(b)) for (const cid of b.conceptes) ordre.push(cid);
+  const out = [];
+  for (const cid of ordre) {
+    const c = cataleg.conceptes.find(x => x.id === cid);
+    if (c && CFG.BANCS.includes(c.banc)) out.push(c);
+  }
+  return out;
 }
 
 function teCodi(cid) {
@@ -207,26 +223,33 @@ function markdown(text) {
 function pintaMapa() {
   const cont = $('llista-conceptes');
   cont.innerHTML = '';
-  let bancAnterior = null;
-  for (const c of conceptesActius()) {
-    if (c.banc !== bancAnterior) {
-      const t = document.createElement('div');
-      t.className = 'banc-titol';
-      t.textContent = c.banc === 'tp1' ? 'Base de Python (TP1)' : 'Python per a àudio (TP2)';
-      cont.appendChild(t);
-      bancAnterior = c.banc;
+  for (const bl of blocs) {
+    const presents = bl.conceptes.filter(cid => {
+      const c = cataleg.conceptes.find(x => x.id === cid);
+      return c && CFG.BANCS.includes(c.banc);
+    });
+    if (!presents.length) continue;
+    const obert = blocObert(bl);
+    const t = document.createElement('div');
+    t.className = 'banc-titol';
+    t.textContent = 'Bloc ' + bl.id + ' · ' + bl.nom + (obert ? '' : ' 🔒');
+    cont.appendChild(t);
+    for (const cid of presents) {
+      const c = cataleg.conceptes.find(x => x.id === cid);
+      const e = ec(c.id);
+      const b = document.createElement('button');
+      b.className = 'concepte' + (e.dominat ? ' dominat' : '') + (item && item.concepte === c.id ? ' actiu' : '') +
+                    (obert ? '' : ' tancat');
+      b.title = obert ? c.descripcio : "S'obrirà més endavant";
+      const r = Math.min(ratxaActual(c.id), CFG.RATXA_DOMINI);
+      let punts = '';
+      for (let i = 0; i < CFG.RATXA_DOMINI; i++) punts += i < r ? '<span class="ple">●</span>' : '○';
+      b.innerHTML = '<span class="nom">' + escapa(c.titol) + '</span><span class="punts">' +
+                    (obert ? (e.dominat ? '✓ ' : '') + punts : '') + '</span>';
+      if (obert) b.onclick = () => { conceptTriat = c.id; nouExercici(); };
+      else b.disabled = true;
+      cont.appendChild(b);
     }
-    const e = ec(c.id);
-    const b = document.createElement('button');
-    b.className = 'concepte' + (e.dominat ? ' dominat' : '') + (item && item.concepte === c.id ? ' actiu' : '');
-    b.title = c.descripcio;
-    const r = Math.min(ratxaActual(c.id), CFG.RATXA_DOMINI);
-    let punts = '';
-    for (let i = 0; i < CFG.RATXA_DOMINI; i++) punts += i < r ? '<span class="ple">●</span>' : '○';
-    b.innerHTML = '<span class="nom">' + escapa(c.titol) + '</span><span class="punts">' +
-                  (e.dominat ? '✓ ' : '') + punts + '</span>';
-    b.onclick = () => { conceptTriat = c.id; nouExercici(); };
-    cont.appendChild(b);
   }
 }
 
@@ -471,6 +494,7 @@ async function arrenca() {
   amaga('carregant', false);
   try {
     cataleg = JSON.parse(await (workerPromesa || creaWorker()));
+    blocs = (await (await fetch('blocs.json?v=' + CFG.VERSIO)).json()).blocs;
   } catch (err) {
     $('text-carregant').textContent = 'No s\'ha pogut carregar Python: ' + err.message +
       '. Comprova la connexió i recarrega la pàgina.';

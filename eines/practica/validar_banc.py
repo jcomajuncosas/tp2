@@ -125,6 +125,35 @@ def main():
     for c in motor.CONCEPTES:
         tipus = per_concepte.get(c['id'], [])
         print('  %-22s %-5s %s' % (c['id'], c['banc'], ', '.join(tipus)))
+    # blocs.json: cada concepte en exactament un bloc; àrees dels checkpoints vàlides
+    import json
+    bj = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blocs.json')))
+    ids = [c['id'] for c in motor.CONCEPTES]
+    vistos = []
+    for b in bj['blocs']:
+        vistos += b['conceptes']
+    for cid in ids:
+        if vistos.count(cid) != 1:
+            print('ERR blocs.json: %s apareix %d vegades' % (cid, vistos.count(cid)))
+            dolentes += 1
+    for cid in vistos:
+        if cid not in ids:
+            print('ERR blocs.json: concepte inexistent %s' % cid)
+            dolentes += 1
+    for cp in bj['checkpoints']:
+        for ar in cp['arees']:
+            tipus = []
+            for cid in ar['conceptes']:
+                if cid not in ids:
+                    print('ERR %s/%s: concepte inexistent %s' % (cp['id'], ar['id'], cid))
+                    dolentes += 1
+                for p in motor.PLANTILLES.values():
+                    if p['concepte'] == cid:
+                        tipus.append(p['tipus'])
+            if 'predir' not in tipus or not ('escriure' in tipus or 'ordenar' in tipus):
+                print('ERR %s/%s: cal com a mínim una plantilla de predir i una de codi' % (cp['id'], ar['id']))
+                dolentes += 1
+    print('blocs.json: %d blocs, %d checkpoints' % (len(bj['blocs']), len(bj['checkpoints'])))
     sys.exit(1 if dolentes else 0)
 
 

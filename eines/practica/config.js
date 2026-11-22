@@ -11,6 +11,10 @@ window.CONFIG = {
   //   ['tp1', 'tp2']   → consolidació durant TP2
   BANCS: ['tp1', 'tp2'],
 
+  // Quants blocs (de blocs.json) estan oberts. Obre'n un de nou a cada fase del calendari:
+  //   1 → Base de Python · 2 → + Arrays i so · 3 → + Classes i estat
+  BLOCS_OBERTS: 1,
+
   // Encerts seguits per dominar un concepte (com a mínim un ha de ser d'escriure codi,
   // si el concepte en té).
   RATXA_DOMINI: 3,
@@ -29,5 +33,5 @@ window.CONFIG = {
   PUNTS: { predir: 10, escriure: 20, ordenar: 15, domini: 50 },
 
   PYODIDE: 'https://cdn.jsdelivr.net/pyodide/v0.28.3/full/',
-  VERSIO: '2026-11-22',
+  VERSIO: '2026-11-22b',
 };
