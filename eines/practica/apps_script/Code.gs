@@ -16,7 +16,7 @@ const PESTANYA_ALUMNES = 'Alumnes';
 const PESTANYA_LOG = 'Esdeveniments';
 const PESTANYA_PROGRES = 'Progrés';
 const CAPCALERA_LOG = ['data', 'codi', 'nom', 'concepte', 'plantilla', 'tipus', 'correcte',
-                       'intents', 'ratxa', 'dominat', 'resposta'];
+                       'intents', 'segons', 'ratxa', 'dominat', 'repàs', 'resposta'];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -29,8 +29,8 @@ function doPost(e) {
 
     const log = pestanya_(ss, PESTANYA_LOG, CAPCALERA_LOG);
     log.appendRow([new Date(d.ts || Date.now()), d.codi, nom, d.concepte, d.plantilla, d.tipus,
-                   d.correcte ? 'sí' : 'no', d.intents, d.ratxa, d.dominat ? 'sí' : 'no',
-                   String(d.resposta || '').slice(0, 2000)]);
+                   d.correcte ? 'sí' : 'no', d.intents, d.segons, d.ratxa, d.dominat ? 'sí' : 'no',
+                   d.repas ? 'sí' : 'no', String(d.resposta || '').slice(0, 2000)]);
 
     actualitzaProgres_(ss, d, nom);
     return resposta_({ ok: true });
@@ -70,7 +70,7 @@ function pestanya_(ss, nom, capcalera) {
  * Cel·la: "✓" si l'ha dominat; si no, "ratxa · encerts/intents".
  */
 function actualitzaProgres_(ss, d, nom) {
-  const sh = pestanya_(ss, PESTANYA_PROGRES, ['codi', 'nom', 'darrera activitat', 'exercicis']);
+  const sh = pestanya_(ss, PESTANYA_PROGRES, ['codi', 'nom', 'darrera activitat', 'exercicis', 'punts']);
   const capcalera = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
   let col = capcalera.indexOf(d.concepte) + 1;
   if (col === 0) {
@@ -82,7 +82,7 @@ function actualitzaProgres_(ss, d, nom) {
   for (let i = 0; i < codis.length; i++) if (codis[i][0] === d.codi) fila = i + 2;
   if (fila === -1) {
     fila = sh.getLastRow() + 1;
-    sh.getRange(fila, 1, 1, 4).setValues([[d.codi, nom, new Date(), 0]]);
+    sh.getRange(fila, 1, 1, 5).setValues([[d.codi, nom, new Date(), 0, 0]]);
   }
   const cel = sh.getRange(fila, col);
   const abans = String(cel.getValue() || '');
@@ -94,6 +94,7 @@ function actualitzaProgres_(ss, d, nom) {
   cel.setValue((d.dominat ? '✓ ' : d.ratxa + ' · ') + encerts + '/' + intents);
   sh.getRange(fila, 3).setValue(new Date());
   sh.getRange(fila, 4).setValue(Number(sh.getRange(fila, 4).getValue() || 0) + 1);
+  if (d.punts !== undefined) sh.getRange(fila, 5).setValue(d.punts);
 }
 
 function resposta_(obj) {

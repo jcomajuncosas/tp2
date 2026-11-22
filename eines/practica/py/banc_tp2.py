@@ -168,6 +168,30 @@ def _(rng):
     return {'enunciat': "Què imprimeix? (Quantes mostres són, i en quin bloc i posició cau l'última.)", 'codi': codi}
 
 
+@plantilla('t2_mostres_fase', 't2_mostres', 'predir')
+def _(rng):
+    inc = rng.choice([0.3, 0.4, 0.25, 0.35, 0.45])
+    n = rng.randint(3, 5)
+    if rng.random() < 0.5:
+        codi = (
+            "fase = 0.0\n"
+            "for i in range(%d):\n"
+            "    fase = (fase + %s) %% 1.0     # es queda amb la part decimal\n"
+            "    print(round(fase, 2))\n" % (n, inc))
+        enunciat = ("Què imprimeix? Amb decimals, `x % 1.0` es queda amb la **part decimal**: és com la fase "
+                    "d'un oscil·lador que dona la volta (a la S08 ho fèiem amb `% (2 * np.pi)`).")
+    else:
+        periode = rng.choice([4, 5, 8])
+        pas = rng.choice([3, 6, 7])
+        codi = (
+            "mostra = 0\n"
+            "for i in range(%d):\n"
+            "    mostra = (mostra + %d) %% %d\n"
+            "    print(mostra, mostra / %d)\n" % (n, pas, periode, periode))
+        enunciat = "Què imprimeix? (La posició dins un cicle de `%d` mostres, i la mateixa posició com a fracció de cicle.)" % periode
+    return {'enunciat': enunciat, 'codi': codi}
+
+
 @plantilla('t2_mostres_bloc', 't2_mostres', 'escriure')
 def _(rng):
     casos = []
@@ -315,17 +339,41 @@ def _(rng):
 
 @plantilla('t2_bm_ordenar_rms', 't2_bucle_mostres', 'ordenar', numpy=True)
 def _(rng):
+    forma = rng.randint(0, 2)
     casos = []
     for _ in range(4):
-        casos.append('energia(np.array(%s))' % mostres(rng, rng.randint(3, 8), 2))
+        casos.append('%s(np.array(' + repr(mostres(rng, rng.randint(3, 9), 2)) + '))')
+    if forma == 0:
+        return {
+            'preambul': PREAMBUL_NP,
+            'enunciat': ("Ordena les línies perquè `energia(so)` retorni la **mitjana dels quadrats** de les mostres "
+                         "(suma de `mostra * mostra`, dividida pel nombre de mostres). **Una de les línies sobra.**"),
+            'referencia': ("def energia(so):\n    suma = 0.0\n    for i in range(len(so)):\n"
+                           "        suma = suma + so[i] * so[i]\n    return suma / len(so)\n"),
+            'distractors': ["        return suma / len(so)"],
+            'funcio': 'energia', 'casos': [c % 'energia' for c in casos],
+        }
+    if forma == 1:
+        return {
+            'preambul': PREAMBUL_NP,
+            'enunciat': ("Ordena les línies perquè `creuaments(so)` compti quantes vegades el so **canvia de signe** "
+                         "entre una mostra i la següent (passa de positiu a negatiu o al revés). És una mesura de "
+                         "com de \"brillant\" o sorollós és un so. **Una de les línies sobra.**"),
+            'referencia': ("def creuaments(so):\n    compte = 0\n    for i in range(1, len(so)):\n"
+                           "        if so[i - 1] * so[i] < 0:\n            compte = compte + 1\n    return compte\n"),
+            'distractors': ["    for i in range(len(so)):"],
+            'funcio': 'creuaments',
+            'casos': [c % 'creuaments' for c in casos] + ['creuaments(np.array([0.5, -0.5, 0.5, 0.2, -0.1]))'],
+        }
     return {
         'preambul': PREAMBUL_NP,
-        'enunciat': ("Ordena les línies perquè `energia(so)` retorni la **mitjana dels quadrats** de les mostres "
-                     "(suma de `mostra * mostra`, dividida pel nombre de mostres)."),
-        'referencia': ("def energia(so):\n    suma = 0.0\n    for i in range(len(so)):\n"
-                       "        suma = suma + so[i] * so[i]\n    return suma / len(so)\n"),
-        'funcio': 'energia',
-        'casos': casos,
+        'enunciat': ("Ordena les línies perquè `suavitza(so)` retorni un array nou on cada mostra és la **mitjana "
+                     "de la mostra i l'anterior** (la primera es queda igual). És el filtre passa-baixos més simple "
+                     "que existeix. **Una de les línies sobra.**"),
+        'referencia': ("def suavitza(so):\n    sortida = np.zeros(len(so))\n    sortida[0] = so[0]\n"
+                       "    for i in range(1, len(so)):\n        sortida[i] = (so[i] + so[i - 1]) / 2\n    return sortida\n"),
+        'distractors': ["        sortida[i] = (so[i] + sortida[i - 1]) / 2"],
+        'funcio': 'suavitza', 'casos': [c % 'suavitza' for c in casos],
     }
 
 
@@ -481,6 +529,290 @@ def _(rng):
 
 
 # ==========================================================================
+concepte('t2_classes', 'tp2', "Sintaxi de classes",
+         "Constructor amb paràmetres (i valors per defecte), self.atribut, mètodes que es criden entre ells, "
+         "objectes dins d'objectes (com VeuFM o el vibrato), dos noms per al mateix objecte")
+# ==========================================================================
+
+@plantilla('t2_cls_constructor', 't2_classes', 'predir')
+def _(rng):
+    a = rng.randint(55, 67)
+    b = rng.randint(55, 67)
+    d = rng.choice([2, 3, 4])
+    v = rng.choice([40, 50, 90])
+    t = rng.choice([12, 7, -12, 5])
+    codi = (
+        "class Nota:\n"
+        "    def __init__(self, altura, durada=1, vel=100):\n"
+        "        self.altura = altura\n"
+        "        self.durada = durada\n"
+        "        self.vel = vel\n"
+        "\n"
+        "    def transposada(self, interval):\n"
+        "        return Nota(self.altura + interval, self.durada, self.vel)\n"
+        "\n"
+        "x = Nota(%d)\n"
+        "y = Nota(%d, %d)\n"
+        "z = Nota(%d, vel=%d)\n"
+        "w = y.transposada(%d)\n"
+        "print(x.altura, x.durada, x.vel)\n"
+        "print(y.durada, z.durada, z.vel)\n"
+        "print(w.altura, w.durada, y.altura)\n" % (a, b, d, a + 4, v, t))
+    return {'enunciat': ("Què imprimeix? Fixa't en quins paràmetres es donen a cada `Nota(...)` i quins agafen "
+                         "el valor per defecte del constructor (`__init__`)."), 'codi': codi}
+
+
+@plantilla('t2_cls_metodes', 't2_classes', 'predir')
+def _(rng):
+    tonica = rng.choice([57, 60, 62, 65])
+    modes = [[0, 2, 4, 5, 7, 9, 11], [0, 2, 3, 5, 7, 8, 10]]
+    intervals = rng.choice(modes)
+    g = rng.randint(1, 6)
+    acord = rng.randint(0, 4)
+    codi = (
+        "class Escala:\n"
+        "    def __init__(self, tonica, intervals):\n"
+        "        self.tonica = tonica\n"
+        "        self.intervals = intervals\n"
+        "\n"
+        "    def grau(self, n):\n"
+        "        return self.tonica + self.intervals[n %% len(self.intervals)]\n"
+        "\n"
+        "    def acord(self, n):\n"
+        "        return [self.grau(n), self.grau(n + 2), self.grau(n + 4)]\n"
+        "\n"
+        "e = Escala(%d, %s)\n"
+        "print(e.grau(%d))\n"
+        "print(e.acord(%d))\n" % (tonica, intervals, g, acord))
+    return {'enunciat': ("Què imprimeix? `acord` crida `grau` amb `self.grau(...)`: un mètode pot fer servir "
+                         "els altres mètodes del mateix objecte."), 'codi': codi}
+
+
+@plantilla('t2_cls_compost', 't2_classes', 'predir')
+def _(rng):
+    f = rng.choice([440, 330, 220])
+    lf = rng.choice([4, 5, 6])
+    dp = rng.choice([3, 6, 10])
+    nova = rng.choice([110, 262, 300])
+    codi = (
+        "class Osc:\n"
+        "    def __init__(self, freq):\n"
+        "        self.freq = freq\n"
+        "\n"
+        "class Vibrato:\n"
+        "    def __init__(self, freq, lfo_freq, depth):\n"
+        "        self.portador = Osc(freq)       # un objecte dins d'un altre\n"
+        "        self.lfo = Osc(lfo_freq)\n"
+        "        self.depth = depth\n"
+        "\n"
+        "    def rang(self):\n"
+        "        return self.portador.freq - self.depth, self.portador.freq + self.depth\n"
+        "\n"
+        "v = Vibrato(%d, %d, %d)\n"
+        "print(v.rang())\n"
+        "v.portador.freq = %d\n"
+        "v.depth = v.depth * 2\n"
+        "print(v.rang(), v.lfo.freq)\n" % (f, lf, dp, nova))
+    return {'enunciat': ("Què imprimeix? `v.portador.freq` vol dir: l'atribut `freq` de l'objecte `portador` "
+                         "que viu dins `v`."), 'codi': codi}
+
+
+@plantilla('t2_cls_alies', 't2_classes', 'predir')
+def _(rng):
+    f = rng.choice([440, 220, 330])
+    g = rng.choice([110, 262, 523])
+    if rng.random() < 0.5:
+        codi = (
+            "class Osc:\n"
+            "    def __init__(self, freq):\n"
+            "        self.freq = freq\n"
+            "\n"
+            "a = Osc(%d)\n"
+            "b = a              # un altre nom per al MATEIX objecte\n"
+            "c = Osc(%d)        # un objecte NOU, encara que igual\n"
+            "b.freq = %d\n"
+            "print(a.freq, b.freq, c.freq)\n" % (f, f, g))
+    else:
+        codi = (
+            "class Osc:\n"
+            "    def __init__(self, freq):\n"
+            "        self.freq = freq\n"
+            "\n"
+            "def octava_amunt(o):\n"
+            "    o.freq = o.freq * 2\n"
+            "\n"
+            "def octava_amunt_copia(o):\n"
+            "    return Osc(o.freq * 2)\n"
+            "\n"
+            "a = Osc(%d)\n"
+            "octava_amunt(a)\n"
+            "b = octava_amunt_copia(a)\n"
+            "print(a.freq, b.freq)\n" % f)
+    return {'enunciat': ("Què imprimeix? Pensa si cada nom apunta a un objecte **nou** o al **mateix** objecte "
+                         "que un altre."), 'codi': codi}
+
+
+@plantilla('t2_cls_escriure', 't2_classes', 'escriure')
+def _(rng):
+    casos = ['__crea(%s, %s)' % (rng.choice([0.01, 0.05, 0.1]), rng.choice([0.2, 0.5, 1.0])),
+             '__crea_sustain(%s, %s, %s)' % (rng.choice([0.01, 0.02]), rng.choice([0.3, 0.4]), rng.choice([0.5, 0.8])),
+             '__durada(%s, %s, %s)' % (rng.choice([0.01, 0.1]), rng.choice([0.2, 0.5]), rng.choice([1, 2, 0.5])),
+             '__durada(0.05, 0.3, 1.0)']
+    return {
+        'enunciat': ("Escriu la classe `ADSR`:\n\n"
+                     "- `ADSR(attack, release, sustain=0.7)` guarda els tres valors en atributs amb el **mateix nom** "
+                     "(`self.attack`, `self.release`, `self.sustain`).\n"
+                     "- `durada_total(premuda)` retorna quants segons sona la nota si la tecla es manté premuda "
+                     "`premuda` segons: el temps premuda més el release."),
+        'esquelet': "class ADSR:\n    pass\n",
+        'referencia': ("class ADSR:\n    def __init__(self, attack, release, sustain=0.7):\n        self.attack = attack\n"
+                       "        self.release = release\n        self.sustain = sustain\n\n"
+                       "    def durada_total(self, premuda):\n        return premuda + self.release\n"),
+        'funcio': 'ADSR',
+        'casos': casos,
+        'ajudants': ("def __crea(a, r):\n    e = ADSR(a, r)\n    return e.attack, e.release, e.sustain\n\n"
+                     "def __crea_sustain(a, r, s):\n    e = ADSR(a, r, s)\n    return e.attack, e.release, e.sustain\n\n"
+                     "def __durada(a, r, p):\n    return round(ADSR(a, r).durada_total(p), 6)\n"),
+        'mutants': [
+            ("class ADSR:\n    def __init__(self, attack, release, sustain):\n        self.attack = attack\n"
+             "        self.release = release\n        self.sustain = sustain\n\n"
+             "    def durada_total(self, premuda):\n        return premuda + self.release\n"),
+            ("class ADSR:\n    def __init__(self, attack, release, sustain=0.7):\n        self.attack = attack\n"
+             "        self.release = release\n        self.sustain = sustain\n\n"
+             "    def durada_total(self, premuda):\n        return premuda + release\n"),
+            ("class ADSR:\n    def __init__(self, attack, release, sustain=0.7):\n        self.attack = attack\n"
+             "        self.release = attack\n        self.sustain = sustain\n\n"
+             "    def durada_total(self, premuda):\n        return premuda + self.release\n"),
+        ],
+    }
+
+
+@plantilla('t2_cls_arregla', 't2_classes', 'escriure')
+def _(rng):
+    forma = rng.randint(0, 1)
+    if forma == 0:
+        buggy = ("class Comptador:\n    def __init__(self, inici):\n        valor = inici\n\n"
+                 "    def suma(self, n):\n        self.valor = valor + n\n\n"
+                 "    def llegeix():\n        return self.valor\n")
+        ref = ("class Comptador:\n    def __init__(self, inici):\n        self.valor = inici\n\n"
+               "    def suma(self, n):\n        self.valor = self.valor + n\n\n"
+               "    def llegeix(self):\n        return self.valor\n")
+        ajud = ("def __prova(inici, sumes):\n    c = Comptador(inici)\n    for n in sumes:\n        c.suma(n)\n"
+                "    return c.llegeix()\n")
+        casos = ['__prova(%d, %s)' % (rng.randint(0, 9), [rng.randint(1, 5), rng.randint(1, 5)]), '__prova(3, [])',
+                 '__prova(%d, [%d])' % (rng.randint(0, 9), rng.randint(1, 9))]
+        mutants = [
+            ("class Comptador:\n    def __init__(self, inici):\n        self.valor = inici\n\n"
+             "    def suma(self, n):\n        self.valor = valor + n\n\n    def llegeix(self):\n        return self.valor\n"),
+            ("class Comptador:\n    def __init__(self, inici):\n        self.valor = inici\n\n"
+             "    def suma(self, n):\n        self.valor = self.valor + n\n\n    def llegeix():\n        return self.valor\n"),
+        ]
+        nom = 'Comptador'
+    else:
+        buggy = ("class Guany:\n    def __init__(self, g):\n        self.g = g\n\n"
+                 "    def process(bloc):\n        return bloc * g\n\n"
+                 "    def mes_fort(self, factor):\n        g = self.g * factor\n")
+        ref = ("class Guany:\n    def __init__(self, g):\n        self.g = g\n\n"
+               "    def process(self, bloc):\n        return bloc * self.g\n\n"
+               "    def mes_fort(self, factor):\n        self.g = self.g * factor\n")
+        ajud = ("def __prova(g, factor, x):\n    a = Guany(g)\n    a.mes_fort(factor)\n    return a.process(x)\n")
+        casos = ['__prova(%s, %d, %s)' % (rng.choice([0.5, 2, 0.25]), rng.randint(2, 4), rng.choice([1, 0.5, -1])),
+                 '__prova(1, 1, 3)', '__prova(%d, 3, 2)' % rng.randint(1, 4)]
+        mutants = [
+            ("class Guany:\n    def __init__(self, g):\n        self.g = g\n\n    def process(self, bloc):\n"
+             "        return bloc * self.g\n\n    def mes_fort(self, factor):\n        g = self.g * factor\n"),
+            ("class Guany:\n    def __init__(self, g):\n        self.g = g\n\n    def process(self, bloc):\n"
+             "        return bloc * g\n\n    def mes_fort(self, factor):\n        self.g = self.g * factor\n"),
+        ]
+        nom = 'Guany'
+    return {
+        'enunciat': ("Aquesta classe té **tres errors**, tots relacionats amb `self`. Troba'ls i arregla-la. "
+                     "Pistes: un atribut que no es guarda, un atribut que no es llegeix bé, i un mètode que no "
+                     "rep l'objecte."),
+        'esquelet': buggy,
+        'referencia': ref,
+        'funcio': nom,
+        'casos': casos,
+        'ajudants': ajud,
+        'mutants': mutants,
+    }
+
+
+@plantilla('t2_cls_cadena', 't2_classes', 'escriure')
+def _(rng):
+    g = rng.choice([0.5, 2, 3])
+    o = rng.choice([1, -1, 0.5])
+    return {
+        'preambul': ("class Guany:\n    def __init__(self, g):\n        self.g = g\n\n    def process(self, x):\n"
+                     "        return x * self.g\n\n"
+                     "class Desplaca:\n    def __init__(self, d):\n        self.d = d\n\n    def process(self, x):\n"
+                     "        return x + self.d\n"),
+        'enunciat': ("Ja tens dues classes fetes, `Guany(g)` i `Desplaca(d)`, i totes dues tenen un mètode "
+                     "`process(x)`. Escriu la classe `Cadena`:\n\n"
+                     "- `Cadena(primer, segon)` rep **dos objectes** qualssevol que tinguin `process` i els guarda.\n"
+                     "- `process(x)` passa `x` pel **primer** i el resultat pel **segon**, i retorna el resultat.\n\n"
+                     "És la idea de la Sessió 9: si tots els efectes es diuen igual (`process`), es poden "
+                     "encadenar sense saber de quin tipus són. Exemple: `Cadena(Guany(2), Desplaca(1)).process(3)` → `7`."),
+        'esquelet': "class Cadena:\n    pass\n",
+        'referencia': ("class Cadena:\n    def __init__(self, primer, segon):\n        self.primer = primer\n"
+                       "        self.segon = segon\n\n    def process(self, x):\n"
+                       "        return self.segon.process(self.primer.process(x))\n"),
+        'funcio': 'Cadena',
+        'casos': ['Cadena(Guany(%s), Desplaca(%s)).process(%d)' % (g, o, rng.randint(1, 5)),
+                  'Cadena(Desplaca(%s), Guany(%s)).process(%d)' % (o, g, rng.randint(1, 5)),
+                  'Cadena(Cadena(Guany(2), Desplaca(1)), Guany(10)).process(1)',
+                  'Cadena(Guany(1), Guany(1)).process(%d)' % rng.randint(1, 9)],
+        'mutants': [
+            ("class Cadena:\n    def __init__(self, primer, segon):\n        self.primer = primer\n"
+             "        self.segon = segon\n\n    def process(self, x):\n"
+             "        return self.primer.process(self.segon.process(x))\n"),
+            ("class Cadena:\n    def __init__(self, primer, segon):\n        self.primer = primer\n"
+             "        self.segon = segon\n\n    def process(self, x):\n"
+             "        return self.primer.process(x) + self.segon.process(x)\n"),
+            ("class Cadena:\n    def __init__(self, primer, segon):\n        self.primer = primer\n"
+             "        self.segon = segon\n\n    def process(self, x):\n        return self.segon.process(x)\n"),
+        ],
+    }
+
+
+@plantilla('t2_cls_sequenciador', 't2_classes', 'escriure')
+def _(rng):
+    notes = []
+    for _ in range(rng.randint(3, 5)):
+        notes.append(rng.randint(48, 72))
+    return {
+        'preambul': ("class Pas:\n    def __init__(self, n_passos):\n        self.n_passos = n_passos\n"
+                     "        self.posicio = 0\n\n    def seguent(self):\n        actual = self.posicio\n"
+                     "        self.posicio = (self.posicio + 1) % self.n_passos\n        return actual\n"),
+        'enunciat': ("Ja tens feta la classe `Pas(n_passos)`: cada crida a `seguent()` retorna 0, 1, 2… i torna a 0. "
+                     "Escriu la classe `Sequenciador`, que la **reutilitza a dins** (com `VeuFM` reutilitza "
+                     "`Oscillator`):\n\n"
+                     "- `Sequenciador(notes)` guarda la llista de notes i **crea un sol** `Pas` amb tantes passes "
+                     "com notes.\n"
+                     "- `seguent()` retorna la nota de la passa actual (i el `Pas` avança).\n\n"
+                     "Exemple: amb `Sequenciador([60, 64, 67])`, quatre crides retornen 60, 64, 67, 60."),
+        'esquelet': "class Sequenciador:\n    pass\n",
+        'referencia': ("class Sequenciador:\n    def __init__(self, notes):\n        self.notes = notes\n"
+                       "        self.pas = Pas(len(notes))\n\n    def seguent(self):\n"
+                       "        return self.notes[self.pas.seguent()]\n"),
+        'funcio': 'Sequenciador',
+        'casos': ['__seq(%s, %d)' % (notes, len(notes) + 2), '__seq([60, 64, 67], 4)', '__dos()'],
+        'ajudants': ("def __seq(notes, k):\n    s = Sequenciador(notes)\n    out = []\n    for i in range(k):\n"
+                     "        out.append(s.seguent())\n    return out\n\n"
+                     "def __dos():\n    a = Sequenciador([1, 2, 3])\n    b = Sequenciador([7, 8])\n    a.seguent()\n"
+                     "    return a.seguent(), b.seguent(), b.seguent(), b.seguent()\n"),
+        'mutants': [
+            ("class Sequenciador:\n    def __init__(self, notes):\n        self.notes = notes\n\n"
+             "    def seguent(self):\n        pas = Pas(len(self.notes))\n        return self.notes[pas.seguent()]\n"),
+            ("class Sequenciador:\n    def __init__(self, notes):\n        self.notes = notes\n"
+             "        self.pas = Pas(len(notes))\n\n    def seguent(self):\n        return self.pas.seguent()\n"),
+            ("class Sequenciador:\n    def __init__(self, notes):\n        self.notes = notes\n"
+             "        self.pas = Pas(3)\n\n    def seguent(self):\n        return self.notes[self.pas.seguent()]\n"),
+        ],
+    }
+
+
+# ==========================================================================
 concepte('t2_objectes', 'tp2', "Objectes amb estat",
          "self.atribut vs variable local, cada instància té el seu estat, l'estat persisteix entre crides")
 # ==========================================================================
@@ -599,18 +931,51 @@ def _(rng):
 
 @plantilla('t2_obj_ordenar_lfo', 't2_objectes', 'ordenar')
 def _(rng):
+    forma = rng.randint(0, 2)
+    if forma == 0:
+        return {
+            'enunciat': ("Ordena les línies de la classe `Rampa`: un oscil·lador en dent de serra que va de 0 a 1. "
+                         "`Rampa(increment)` comença a 0; cada crida a `seguent()` retorna el valor actual i després "
+                         "l'avança `increment`. `% 1.0` el fa tornar a començar quan passa d'1 (es queda amb la part "
+                         "decimal, igual que `% (2 * np.pi)` amb la fase de l'oscil·lador). **Una de les línies sobra.**"),
+            'referencia': ("class Rampa:\n    def __init__(self, increment):\n        self.increment = increment\n"
+                           "        self.valor = 0.0\n    def seguent(self):\n        actual = self.valor\n"
+                           "        self.valor = (self.valor + self.increment) % 1.0\n        return actual\n"),
+            'distractors': ["        self.valor = self.valor + self.increment"],
+            'funcio': 'Rampa',
+            'casos': ['__seq(0.25, 6)', '__seq(%s, %d)' % (rng.choice([0.1, 0.2, 0.3, 0.4, 0.125, 0.375]), rng.randint(4, 9)),
+                      '__seq(%s, 7)' % rng.choice([0.5, 0.75, 0.6])],
+            'ajudants': ("def __seq(inc, k):\n    r = Rampa(inc)\n    out = []\n    for i in range(k):\n"
+                         "        out.append(round(r.seguent(), 6))\n    return out\n"),
+        }
+    if forma == 1:
+        return {
+            'enunciat': ("Ordena les línies de la classe `Arpegiador`: `Arpegiador(notes)` guarda una llista de notes; "
+                         "cada crida a `seguent()` retorna la nota que toca i passa a la següent, tornant a la primera "
+                         "quan s'acaben. **Una de les línies sobra.**"),
+            'referencia': ("class Arpegiador:\n    def __init__(self, notes):\n        self.notes = notes\n"
+                           "        self.i = 0\n    def seguent(self):\n        nota = self.notes[self.i]\n"
+                           "        self.i = (self.i + 1) % len(self.notes)\n        return nota\n"),
+            'distractors': ["        i = (self.i + 1) % len(self.notes)"],
+            'funcio': 'Arpegiador',
+            'casos': ['__seq(%s, %d)' % (repr([60, 64, 67]), 7),
+                      '__seq(%s, %d)' % (repr([rng.randint(48, 60), rng.randint(61, 72), rng.randint(73, 84), rng.randint(60, 72)]), rng.randint(5, 10))],
+            'ajudants': ("def __seq(notes, k):\n    a = Arpegiador(notes)\n    out = []\n    for i in range(k):\n"
+                         "        out.append(a.seguent())\n    return out\n"),
+        }
     return {
-        'enunciat': ("Ordena les línies de la classe `Rampa`: un oscil·lador en dent de serra que va de 0 a 1. "
-                     "`Rampa(increment)` comença a 0; cada crida a `seguent()` retorna el valor actual i després "
-                     "l'avança `increment`, tornant a començar quan passa d'1 (amb `% 1.0`)."),
-        'referencia': ("class Rampa:\n    def __init__(self, increment):\n        self.increment = increment\n"
-                       "        self.valor = 0.0\n    def seguent(self):\n        actual = self.valor\n"
-                       "        self.valor = (self.valor + self.increment) % 1.0\n        return actual\n"),
-        'funcio': 'Rampa',
-        'casos': ['__seq(0.25, 6)', '__seq(%s, %d)' % (rng.choice([0.1, 0.2, 0.3, 0.4, 0.125, 0.375]), rng.randint(4, 9)),
-                  '__seq(%s, 7)' % rng.choice([0.5, 0.75, 0.6])],
-        'ajudants': ("def __seq(inc, k):\n    r = Rampa(inc)\n    out = []\n    for i in range(k):\n"
-                     "        out.append(round(r.seguent(), 6))\n    return out\n"),
+        'enunciat': ("Ordena les línies de la classe `Pic`: un mesurador que recorda el **valor absolut més gran** que "
+                     "ha vist. `Pic()` comença a 0; `mira(bloc)` rep un array, actualitza el pic si cal i no retorna "
+                     "res; `valor()` retorna el pic. **Una de les línies sobra.**"),
+        'preambul': PREAMBUL_NP,
+        'referencia': ("class Pic:\n    def __init__(self):\n        self.pic = 0.0\n    def mira(self, bloc):\n"
+                       "        m = np.max(np.abs(bloc))\n        if m > self.pic:\n            self.pic = m\n"
+                       "    def valor(self):\n        return self.pic\n"),
+        'distractors': ["            pic = m"],
+        'funcio': 'Pic',
+        'casos': ['__blocs(%s)' % repr([mostres(rng, 3), mostres(rng, 3), mostres(rng, 3)]), '__blocs([[0.1, -0.9], [0.5, 0.2]])'],
+        'ajudants': ("def __blocs(blocs):\n    p = Pic()\n    for b in blocs:\n        p.mira(np.array(b))\n"
+                     "    return round(p.valor(), 6)\n"),
     }
 
 
@@ -653,6 +1018,7 @@ def _(rng):
         "        self._phase = 0.0\n"
         "\n"
         "    def process(self, n):\n"
+        "        # %% 1.0 es queda amb la part decimal: el valor torna a 0 quan arriba a 1\n"
         "        bloc = (self._phase + self.increment * np.arange(n)) %% 1.0\n"
         "        self._phase = (self._phase + self.increment * n) %% 1.0\n"
         "        return bloc\n"

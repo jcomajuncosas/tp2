@@ -17,6 +17,7 @@ let intents = 0;
 let resolt = false;
 let conceptTriat = null;       // si l'alumne tria un concepte al mapa
 let ultimaPlantilla = null;
+let tInici = 0;
 
 // ---------------------------------------------------------------- worker
 let worker = null;
@@ -66,7 +67,7 @@ function carregaEstat() {
     const s = localStorage.getItem(clauEstat());
     if (s) return JSON.parse(s);
   } catch (e) { /* localStorage no disponible */ }
-  return { conceptes: {} };
+  return { conceptes: {}, punts: 0, insignies: [] };
 }
 
 function desaEstat() {
@@ -125,6 +126,60 @@ function triaPlantilla(cid) {
   }
   if (opcions.length > 1) opcions = opcions.filter(p => p.id !== ultimaPlantilla);
   return opcions[Math.floor(Math.random() * opcions.length)];
+}
+
+// ---------------------------------------------------------------- marcador
+const INSIGNIES = [
+  { id: 'primer', icona: '🌱', titol: 'Primer concepte dominat', cond: () => dominats().length >= 1 },
+  { id: 'tp1', icona: '🐍', titol: 'Base de Python completa', cond: () => bancComplet('tp1') },
+  { id: 'tp2', icona: '🎛️', titol: 'Python per a àudio complet', cond: () => bancComplet('tp2') },
+  { id: 'ratxa10', icona: '🔥', titol: '10 encerts seguits', cond: () => (estat.ratxaGlobal || 0) >= 10 },
+];
+
+function dominats() { return conceptesActius().filter(c => ec(c.id).dominat); }
+
+function bancComplet(banc) {
+  const cs = cataleg.conceptes.filter(c => c.banc === banc && CFG.BANCS.includes(banc));
+  return cs.length > 0 && cs.every(c => ec(c.id).dominat);
+}
+
+function pintaMarcador() {
+  $('punts').textContent = '⭐ ' + (estat.punts || 0) + ' punts';
+  const cont = $('insignies');
+  cont.innerHTML = '';
+  for (const ins of INSIGNIES) {
+    if ((estat.insignies || []).includes(ins.id)) {
+      const sp = document.createElement('span');
+      sp.textContent = ins.icona;
+      sp.title = ins.titol;
+      cont.appendChild(sp);
+    }
+  }
+}
+
+function comprovaInsignies() {
+  const noves = [];
+  estat.insignies = estat.insignies || [];
+  for (const ins of INSIGNIES) {
+    if (!estat.insignies.includes(ins.id) && ins.cond()) {
+      estat.insignies.push(ins.id);
+      noves.push(ins);
+    }
+  }
+  return noves;
+}
+
+function textProgres(cid) {
+  const e = ec(cid);
+  const n = CFG.RATXA_DOMINI;
+  if (e.dominat) return 'Concepte dominat. Aquest exercici és de <strong>repàs</strong>: suma punts però no cal per avançar.';
+  const r = Math.min(ratxaActual(cid), n);
+  const ratxa = e.ratxa.slice(-ratxaActual(cid));
+  const faltaCodi = teCodi(cid) && !ratxa.some(x => x.ok && x.tipus !== 'predir');
+  let t = 'Encerts seguits en aquest concepte: <strong>' + r + ' de ' + n + '</strong>';
+  t += ' · en ' + (n - r === 1 ? 'falta' : 'falten') + ' <strong>' + (n - r) + '</strong>';
+  if (faltaCodi) t += ' (i com a mínim un ha de ser d\'escriure o ordenar codi)';
+  return t + '.';
 }
 
 // ---------------------------------------------------------------- render
@@ -212,6 +267,13 @@ function pintaExercici() {
   const c = cataleg.conceptes.find(x => x.id === item.concepte);
   $('ex-concepte').textContent = c.titol;
   $('ex-tipus').textContent = NOM_TIPUS[item.tipus];
+  amaga('ex-repas', !ec(item.concepte).dominat);
+  $('ex-progres').innerHTML = textProgres(item.concepte);
+  amaga('toast', true);
+  $('nota-ordenar').textContent = 'Clica les línies en l\'ordre correcte. Clica una línia de la solució per tornar-la a dalt.' +
+    (item.n_distractors ? ' Compte: ' + (item.n_distractors === 1 ? 'una línia sobra' : item.n_distractors + ' línies sobren') +
+     ' i s\'ha de quedar a dalt.' : '');
+  tInici = Date.now();
   $('ex-enunciat').innerHTML = markdown(item.enunciat);
   amaga('ex-codi', item.tipus !== 'predir');
   if (item.tipus === 'predir') $('ex-codi').textContent = item.codi;
@@ -262,7 +324,7 @@ function respostaActual() {
 async function comprova() {
   if (resolt) return;
   const resposta = respostaActual();
-  if (item.tipus === 'ordenar' && $('ord-origen').children.length > 0) {
+  if (item.tipus === 'ordenar' && $('ord-origen').children.length > (item.n_distractors || 0)) {
     mostraResultat('malament', 'Encara queden línies per col·locar.');
     return;
   }
@@ -289,8 +351,13 @@ async function comprova() {
   if (r.correcte) {
     const compta = item.tipus === 'predir' || intents <= CFG.INTENTS_ESCRIURE;
     finalitza(compta, resposta);
-    mostraResultat('be', compta ? '✔ Correcte!' :
-      '✔ Correcte, però amb massa intents per comptar a la ratxa. Ja ho tens: el següent sortirà millor.');
+    let html = compta ? '✔ Correcte!' :
+      '✔ Correcte, però amb massa intents per comptar a la ratxa. Ja ho tens: el següent sortirà millor.';
+    if (r.notes && r.notes.length) {
+      html += r.notes.map(n => '<p class="nota-format">' + enLinia(n) + '</p>').join('') +
+        '<pre>' + escapa(r.solucio) + '</pre>';
+    }
+    mostraResultat('be', html);
     return;
   }
   if (item.tipus === 'predir') {
@@ -316,10 +383,21 @@ function finalitza(ok, resposta) {
   if (e.ratxa.length > 20) e.ratxa = e.ratxa.slice(-20);
   const abans = e.dominat;
   actualitzaDomini(item.concepte);
+  estat.ratxaGlobal = ok ? (estat.ratxaGlobal || 0) + 1 : 0;
+  let guanyats = ok ? (CFG.PUNTS[item.tipus] || 10) : 0;
+  if (!abans && e.dominat) guanyats += CFG.PUNTS.domini;
+  estat.punts = (estat.punts || 0) + guanyats;
+  const noves = comprovaInsignies();
   desaEstat();
+  const segons = Math.round((Date.now() - tInici) / 1000);
   envia({ concepte: item.concepte, plantilla: item.id, tipus: item.tipus, correcte: ok,
-          intents, dominat: e.dominat, ratxa: ratxaActual(item.concepte),
+          intents, dominat: e.dominat, ratxa: ratxaActual(item.concepte), segons,
+          repas: abans, punts: estat.punts,
           resposta: resposta.slice(0, 1500), seed: item.seed });
+  pintaMarcador();
+  $('ex-progres').innerHTML = textProgres(item.concepte);
+  if (guanyats) mostraToast('+' + guanyats + ' punts' + (noves.length ? ' · Nova insígnia: ' +
+    noves.map(n => n.icona + ' ' + n.titol).join(', ') : ''), noves.length > 0);
   amaga('btn-comprova', true);
   amaga('btn-solucio', true);
   amaga('btn-seguent', false);
@@ -332,6 +410,13 @@ function finalitza(ok, resposta) {
         'Hi tornarà a sortir algun exercici de repàs de tant en tant.</p>';
     }, 50);
   }
+}
+
+function mostraToast(text, destacat) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.remove('amagat');
+  t.style.fontWeight = destacat ? '600' : '400';
 }
 
 function veureSolucio() {
@@ -392,6 +477,7 @@ async function arrenca() {
     return;
   }
   pintaMapa();
+  pintaMarcador();
   nouExercici();
 }
 
@@ -410,12 +496,31 @@ function demanaCodi() {
   $('input-codi').focus();
 }
 
+function bloquejaCopia() {
+  if (!CFG.BLOQUEJA_COPIA) return;
+  for (const id of ['ex-enunciat', 'ex-codi', 'ord-origen', 'ord-desti']) {
+    const el = $(id);
+    el.classList.add('no-copia');
+    for (const ev of ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart']) {
+      el.addEventListener(ev, (e) => e.preventDefault());
+    }
+  }
+  for (const id of ['input-codi-alumne', 'input-sortida']) {
+    $(id).addEventListener('paste', (e) => {
+      e.preventDefault();
+      mostraToast('Aquí no es pot enganxar: escriu-ho tu (és la gràcia de practicar).', false);
+    });
+    $(id).addEventListener('drop', (e) => e.preventDefault());
+  }
+}
+
 $('btn-comprova').onclick = comprova;
 $('btn-seguent').onclick = () => { nouExercici(); };
 $('btn-solucio').onclick = veureSolucio;
 $('btn-auto').onclick = () => { conceptTriat = null; nouExercici(); };
 editorAmbIndentacio($('input-codi-alumne'));
 editorAmbIndentacio($('input-sortida'));
+bloquejaCopia();
 
 creaWorker();   // comença a carregar Python mentre l'alumne escriu el codi
 const param = new URLSearchParams(location.search).get('a');

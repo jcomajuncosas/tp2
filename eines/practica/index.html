@@ -10,7 +10,7 @@
 <body>
 <header>
   <h1 id="titol">Pràctica de Python</h1>
-  <div id="usuari"></div>
+  <div id="marcador"><span id="punts" title="Punts"></span><span id="insignies"></span><span id="usuari"></span></div>
 </header>
 
 <main>
@@ -37,7 +37,9 @@
       <div class="capcalera-ex">
         <span id="ex-concepte" class="etiqueta"></span>
         <span id="ex-tipus" class="etiqueta tipus"></span>
+        <span id="ex-repas" class="etiqueta repas amagat">Repàs · ja dominat (extra)</span>
       </div>
+      <p id="ex-progres" class="progres"></p>
       <div id="ex-enunciat" class="enunciat"></div>
       <pre id="ex-codi" class="codi amagat"></pre>
 
@@ -53,7 +55,7 @@
       </div>
 
       <div id="resposta-ordenar" class="amagat">
-        <p class="nota">Clica les línies en l'ordre correcte. Clica una línia de la solució per tornar-la a dalt.</p>
+        <p class="nota" id="nota-ordenar">Clica les línies en l'ordre correcte. Clica una línia de la solució per tornar-la a dalt.</p>
         <div class="columnes">
           <div><h3>Línies</h3><ol id="ord-origen" class="linies"></ol></div>
           <div><h3>La teva solució</h3><ol id="ord-desti" class="linies desti"></ol></div>
@@ -66,6 +68,7 @@
         <button id="btn-seguent" class="amagat">Següent ➜</button>
       </div>
       <div id="resultat" class="amagat"></div>
+      <div id="toast" class="amagat"></div>
     </div>
   </section>
 </main>

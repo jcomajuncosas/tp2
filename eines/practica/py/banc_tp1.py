@@ -34,29 +34,37 @@ concepte('t1_aritmetica', 'tp1', "Operadors: / // % ** i conversions",
 
 @plantilla('t1_arit_compas', 't1_aritmetica', 'predir')
 def _(rng):
-    per_compas = rng.choice([3, 4, 6])
+    per_compas = rng.choice([2, 4, 5, 8])          # divisions amb decimals finits
     pulsacio = rng.randint(per_compas + 1, 6 * per_compas)
     while pulsacio % per_compas == 0:
         pulsacio = pulsacio + 1
-    codi = (
-        "pulsacio = %d       # comptem les pulsacions des de 0\n"
-        "per_compas = %d\n"
-        "print(pulsacio // per_compas, pulsacio %% per_compas)\n"
-        "print(pulsacio / per_compas)\n" % (pulsacio, per_compas))
+    if rng.random() < 0.5:
+        codi = (
+            "pulsacio = %d       # comptem les pulsacions des de 0\n"
+            "per_compas = %d\n"
+            "print(pulsacio // per_compas, pulsacio %% per_compas)\n"
+            "print(pulsacio / per_compas)\n" % (pulsacio, per_compas))
+    else:
+        codi = (
+            "segons = %d\n"
+            "print(segons // 60, segons %% 60)\n"
+            "print(segons / %d)\n" % (rng.randint(61, 400), per_compas))
     return {'enunciat': "Què imprimeix?", 'codi': codi}
 
 
 @plantilla('t1_arit_conversions', 't1_aritmetica', 'predir')
 def _(rng):
-    x = rng.randint(1, 9) + rng.choice([0.2, 0.3, 0.7, 0.8])
+    signe = rng.choice([1, 1, -1])
+    x = signe * (rng.randint(1, 9) + rng.choice([0.2, 0.3, 0.7, 0.8]))
     e = rng.randint(2, 5)
     b = rng.choice([2, 3])
     v = -rng.randint(2, 30)
     codi = (
         "x = %s\n"
         "print(int(x), round(x))\n"
-        "print(%d ** %d, abs(%d))\n" % (x, b, e, v))
-    return {'enunciat': "Què imprimeix? Fixa't en la diferència entre `int()` i `round()`.", 'codi': codi}
+        "print(%d ** %d, abs(%d))\n" % (round(x, 1), b, e, v))
+    return {'enunciat': ("Què imprimeix? `int()` i `round()` **no** sempre donen el mateix: "
+                         "pensa què fa cadascun amb la part decimal (i amb els negatius)."), 'codi': codi}
 
 
 @plantilla('t1_arit_octava', 't1_aritmetica', 'escriure')
@@ -320,15 +328,26 @@ def _(rng):
     nom = rng.choice(['velocities', 'intensitats', 'cops'])
     llista = numeros(rng, rng.randint(5, 7), 10, 127)
     llindar = rng.choice([50, 64, 80, 100])
-    codi = (
-        "%s = %s\n"
-        "compte = 0\n"
-        "total = 0\n"
-        "for v in %s:\n"
-        "    if v > %d:\n"
-        "        compte = compte + 1\n"
-        "        total = total + v\n"
-        "print(compte, total)\n" % (nom, llista, nom, llindar))
+    if rng.random() < 0.5:
+        codi = (
+            "%s = %s\n"
+            "compte = 0\n"
+            "total = 0\n"
+            "for v in %s:\n"
+            "    if v > %d:\n"
+            "        compte = compte + 1\n"
+            "        total = total + v\n"
+            "print(compte, total)\n" % (nom, llista, nom, llindar))
+    else:
+        codi = (
+            "%s = %s\n"
+            "millor = %s[0]\n"
+            "on = 0\n"
+            "for i in range(len(%s)):\n"
+            "    if %s[i] < millor:\n"
+            "        millor = %s[i]\n"
+            "        on = i\n"
+            "print(millor, on)\n" % (nom, llista, nom, nom, nom, nom))
     return {'enunciat': "Què imprimeix?", 'codi': codi}
 
 
@@ -411,18 +430,46 @@ def _(rng):
 
 @plantilla('t1_acum_ordenar_compta', 't1_acumuladors', 'ordenar')
 def _(rng):
+    forma = rng.randint(0, 2)
     casos = []
+    if forma == 0:
+        for _ in range(4):
+            casos.append('compta_dins(%s, %d, %d)' % (notes_aleatories(rng, rng.randint(4, 9), 48, 84), 55, 72))
+        casos.append('compta_dins([], 60, 72)')
+        return {
+            'enunciat': ("Ordena les línies perquè `compta_dins(notes, baix, alt)` retorni quantes notes són "
+                         "**dins el registre** `[baix, alt]` (tots dos inclosos). La indentació ja hi és. "
+                         "**Una de les línies sobra.**"),
+            'referencia': ("def compta_dins(notes, baix, alt):\n    compte = 0\n    for nota in notes:\n"
+                           "        if nota >= baix and nota <= alt:\n            compte = compte + 1\n"
+                           "    return compte\n"),
+            'distractors': ["        return compte"],
+            'funcio': 'compta_dins', 'casos': casos,
+        }
+    if forma == 1:
+        for _ in range(4):
+            casos.append('suma_fortes(%s, %d)' % (numeros(rng, rng.randint(3, 8), 0, 127), rng.choice([50, 64, 90])))
+        casos.append('suma_fortes([], 50)')
+        return {
+            'enunciat': ("Ordena les línies perquè `suma_fortes(velocities, llindar)` retorni la **suma** de les "
+                         "velocities que **superen** `llindar`. **Una de les línies sobra.**"),
+            'referencia': ("def suma_fortes(velocities, llindar):\n    total = 0\n    i = 0\n"
+                           "    while i < len(velocities):\n        if velocities[i] > llindar:\n"
+                           "            total = total + velocities[i]\n        i = i + 1\n    return total\n"),
+            'distractors': ["        total = 0"],
+            'funcio': 'suma_fortes', 'casos': casos,
+        }
     for _ in range(4):
-        casos.append('compta_dins(%s, %d, %d)' % (notes_aleatories(rng, rng.randint(4, 9), 48, 84), 55, 72))
-    casos.append('compta_dins([], 60, 72)')
+        l = notes_aleatories(rng, rng.randint(3, 8), 48, 84)
+        casos.append('ultima_aguda(%s, %d)' % (l, rng.choice(l)))
+    casos.append('ultima_aguda([60, 62], 80)')
     return {
-        'enunciat': ("Ordena les línies perquè `compta_dins(notes, baix, alt)` retorni quantes notes són "
-                     "**dins el registre** `[baix, alt]` (tots dos inclosos). La indentació ja hi és."),
-        'referencia': ("def compta_dins(notes, baix, alt):\n    compte = 0\n    for nota in notes:\n"
-                       "        if nota >= baix and nota <= alt:\n            compte = compte + 1\n"
-                       "    return compte\n"),
-        'funcio': 'compta_dins',
-        'casos': casos,
+        'enunciat': ("Ordena les línies perquè `ultima_aguda(notes, llindar)` retorni la **posició de l'última** "
+                     "nota que és **com a mínim** `llindar`, o -1 si no n'hi ha cap. **Una de les línies sobra.**"),
+        'referencia': ("def ultima_aguda(notes, llindar):\n    pos = -1\n    for i in range(len(notes)):\n"
+                       "        if notes[i] >= llindar:\n            pos = i\n    return pos\n"),
+        'distractors': ["            return i"],
+        'funcio': 'ultima_aguda', 'casos': casos,
     }
 
 
@@ -514,17 +561,47 @@ concepte('t1_funcions', 'tp1', "Funcions",
 def _(rng):
     x = rng.randint(2, 9)
     k = rng.randint(2, 5)
-    codi = (
-        "def doble_print(x):\n"
-        "    print(x * 2)\n"
-        "\n"
-        "def multiplica(x):\n"
-        "    return x * %d\n"
-        "\n"
-        "a = doble_print(%d)\n"
-        "b = multiplica(%d)\n"
-        "print(a, b)\n" % (k, x, x))
-    return {'enunciat': "Què imprimeix? Pensa què retorna una funció que **no** té `return`.", 'codi': codi}
+    forma = rng.randint(0, 2)
+    if forma == 0:
+        codi = (
+            "def doble_print(x):\n"
+            "    print(x * 2)\n"
+            "\n"
+            "def multiplica(x):\n"
+            "    return x * %d\n"
+            "\n"
+            "a = doble_print(%d)\n"
+            "b = multiplica(%d)\n"
+            "print(a, b)\n" % (k, x, x))
+    elif forma == 1:
+        llista = []
+        for _ in range(rng.randint(3, 5)):
+            llista.append(rng.randint(1, 9))
+        llindar = rng.randint(3, 7)
+        codi = (
+            "def primer_gran(valors, llindar):\n"
+            "    for v in valors:\n"
+            "        if v > llindar:\n"
+            "            return v\n"
+            "        print('descarto', v)\n"
+            "    return 0\n"
+            "\n"
+            "r = primer_gran(%s, %d)\n"
+            "print('resultat', r)\n" % (llista, llindar))
+    else:
+        codi = (
+            "def suma_i_mostra(a, b):\n"
+            "    total = a + b\n"
+            "    print('dins:', total)\n"
+            "\n"
+            "def suma(a, b):\n"
+            "    return a + b\n"
+            "\n"
+            "x = suma(%d, %d) * %d\n"
+            "y = suma_i_mostra(%d, %d)\n"
+            "print(x, y)\n" % (x, k, k, x, x))
+    return {'enunciat': ("Què imprimeix? Pensa què **retorna** cada funció (una funció sense `return` "
+                         "retorna `None`, i un `return` acaba la funció a l'instant)."), 'codi': codi}
 
 
 @plantilla('t1_func_defecte', 't1_funcions', 'predir')
@@ -532,14 +609,24 @@ def _(rng):
     d = rng.choice([12, 7, 5])
     n1 = rng.randint(55, 70)
     i2 = rng.choice([-12, 2, 4, -5])
-    codi = (
-        "def transposa(nota, interval=%d):\n"
-        "    return nota + interval\n"
-        "\n"
-        "print(transposa(%d))\n"
-        "print(transposa(%d, %d))\n"
-        "print(transposa(transposa(%d), %d))\n" % (d, n1, n1, i2, n1, i2))
-    return {'enunciat': "Què imprimeix?", 'codi': codi}
+    if rng.random() < 0.5:
+        codi = (
+            "def transposa(nota, interval=%d):\n"
+            "    return nota + interval\n"
+            "\n"
+            "print(transposa(%d))\n"
+            "print(transposa(%d, %d))\n"
+            "print(transposa(transposa(%d), %d))\n" % (d, n1, n1, i2, n1, i2))
+    else:
+        v = rng.choice([64, 80, 100])
+        codi = (
+            "def nota_on(nota, velocity=%d, canal=1):\n"
+            "    return [canal, nota, velocity]\n"
+            "\n"
+            "print(nota_on(%d))\n"
+            "print(nota_on(%d, canal=%d))\n"
+            "print(nota_on(%d, %d))\n" % (v, n1, n1 + 2, rng.randint(2, 9), n1 + 4, rng.randint(1, 127)))
+    return {'enunciat': "Què imprimeix? (Els paràmetres amb `=` tenen un valor per defecte.)", 'codi': codi}
 
 
 @plantilla('t1_func_tupla', 't1_funcions', 'predir')
@@ -586,16 +673,29 @@ concepte('t1_llistes', 'tp1', "Construir llistes",
 
 @plantilla('t1_llistes_append_concat', 't1_llistes', 'predir')
 def _(rng):
-    a = notes_aleatories(rng, rng.randint(2, 3))
+    a = []
+    for _ in range(rng.randint(2, 3)):
+        a.append(rng.randint(60, 72))
     x = rng.randint(60, 72)
     y = rng.randint(60, 72)
-    codi = (
-        "a = %s\n"
-        "b = a + [%d]\n"
-        "a.append(%d)\n"
-        "print(len(a), len(b))\n"
-        "print(b[-1], a[-1])\n" % (a, x, y))
-    return {'enunciat': "Què imprimeix?", 'codi': codi}
+    if rng.random() < 0.5:
+        codi = (
+            "a = %s\n"
+            "b = a + [%d]\n"
+            "a.append(%d)\n"
+            "print(len(a), len(b))\n"
+            "print(b[-1], a[-1])\n" % (a, x, y))
+        enunciat = "Què imprimeix? (`a + [x]` crea una llista **nova**; `append` modifica la que ja hi ha.)"
+    else:
+        codi = (
+            "a = %s\n"
+            "b = a          # compte: no és una còpia!\n"
+            "c = a.copy()\n"
+            "b.append(%d)\n"
+            "print(len(a), len(b), len(c))\n"
+            "print(a[-1])\n" % (a, x))
+        enunciat = "Què imprimeix? (`b = a` no copia la llista: dos noms per a **la mateixa** llista.)"
+    return {'enunciat': enunciat, 'codi': codi}
 
 
 @plantilla('t1_llistes_repeticio', 't1_llistes', 'predir')
@@ -638,16 +738,39 @@ def _(rng):
 
 @plantilla('t1_llistes_ordenar', 't1_llistes', 'ordenar')
 def _(rng):
+    forma = rng.randint(0, 2)
     casos = []
     for _ in range(4):
-        casos.append('intervals(%s)' % notes_aleatories(rng, rng.randint(2, 7)))
+        casos.append('%s(' + repr(notes_aleatories(rng, rng.randint(2, 7))) + ')')
+    if forma == 0:
+        return {
+            'enunciat': ("Ordena les línies perquè `intervals(notes)` retorni la llista dels **intervals** entre "
+                         "notes consecutives (cada nota menys l'anterior). Exemple: `[60, 64, 62]` → `[4, -2]`. "
+                         "**Una de les línies sobra.**"),
+            'referencia': ("def intervals(notes):\n    resultat = []\n    for i in range(1, len(notes)):\n"
+                           "        salt = notes[i] - notes[i - 1]\n        resultat.append(salt)\n    return resultat\n"),
+            'distractors': ["        resultat = [salt]"],
+            'funcio': 'intervals', 'casos': [c % 'intervals' for c in casos],
+        }
+    if forma == 1:
+        return {
+            'enunciat': ("Ordena les línies perquè `acumulat(durades)` retorni la llista dels **instants d'inici** "
+                         "de cada nota: la primera comença a 0 i cada una comença quan acaba l'anterior. "
+                         "Exemple: `[2, 1, 4]` → `[0, 2, 3]`. **Una de les línies sobra.**"),
+            'referencia': ("def acumulat(durades):\n    inicis = []\n    t = 0\n    for d in durades:\n"
+                           "        inicis.append(t)\n        t = t + d\n    return inicis\n"),
+            'distractors': ["        t = 0"],
+            'funcio': 'acumulat', 'casos': [c % 'acumulat' for c in casos],
+        }
     return {
-        'enunciat': ("Ordena les línies perquè `intervals(notes)` retorni la llista dels **intervals** entre "
-                     "notes consecutives (cada nota menys l'anterior). Exemple: `[60, 64, 62]` → `[4, -2]`."),
-        'referencia': ("def intervals(notes):\n    resultat = []\n    for i in range(1, len(notes)):\n"
-                       "        salt = notes[i] - notes[i - 1]\n        resultat.append(salt)\n    return resultat\n"),
-        'funcio': 'intervals',
-        'casos': casos,
+        'enunciat': ("Ordena les línies perquè `sense_repetides(notes)` retorni una llista nova on s'eliminen les "
+                     "notes **iguals a l'anterior**. Exemple: `[60, 60, 62, 62, 60]` → `[60, 62, 60]`. "
+                     "**Una de les línies sobra.**"),
+        'referencia': ("def sense_repetides(notes):\n    resultat = [notes[0]]\n    for i in range(1, len(notes)):\n"
+                       "        if notes[i] != notes[i - 1]:\n            resultat.append(notes[i])\n    return resultat\n"),
+        'distractors': ["        if notes[i] != resultat[0]:"],
+        'funcio': 'sense_repetides',
+        'casos': [c % 'sense_repetides' for c in casos] + ['sense_repetides([60, 60, 62, 62, 60])'],
     }
 
 

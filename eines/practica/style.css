@@ -87,3 +87,13 @@ button.secundari { background: white; color: var(--accent); }
 .linies li:hover { background: #e4e2da; }
 
 footer { text-align: center; color: var(--suau); font-size: 0.75rem; padding: 0 0 1.5rem; }
+
+#marcador { display: flex; gap: 1rem; align-items: center; font-size: 0.9rem; color: var(--suau); }
+#punts { color: var(--tinta); font-weight: 600; }
+#insignies span { margin-left: 0.2rem; cursor: default; }
+.etiqueta.repas { background: #fdf3e1; color: #8a5a00; }
+.progres { font-size: 0.85rem; color: var(--suau); margin: -0.3rem 0 0.9rem; }
+.progres strong { color: var(--accent); }
+.no-copia { -webkit-user-select: none; user-select: none; }
+.nota-format { margin: 0.5rem 0 0; color: var(--tinta); font-size: 0.9rem; }
+#toast { margin-top: 0.8rem; padding: 0.7rem 1rem; border-radius: 8px; background: #fdf3e1; color: #6b4600; }

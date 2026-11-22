@@ -3,8 +3,10 @@
 Bateries d'exercicis amb variants aleatòries i progrés individual per domini, com qui es prepara el carnet de conduir. Tot el Python s'executa **al navegador de l'alumne** (Pyodide): al servidor no s'hi executa res. Els resultats van a un Google Sheet de l'ESMUC.
 
 - **Banc TP1** (9 conceptes): mecànica de Python en context musical neutre. Serveix per a l'**anivellament** a l'inici de TP2 en properes edicions (`BANCS: ['tp1']`).
-- **Banc TP2** (8 conceptes): la mateixa mecànica dins dels conceptes del curs: arrays i mostres, blocs, buffers circulars, objectes amb estat, callbacks.
-- **Tres tipus d'exercici:** *predir* (què imprimeix?), *escriure* (una funció o classe, provada amb casos ocults) i *ordenar* (línies desordenades, *Parsons problems*).
+- **Banc TP2** (9 conceptes): la mateixa mecànica dins dels conceptes del curs: arrays i mostres, blocs, buffers circulars, **sintaxi de classes** (constructors, `self`, objectes dins d'objectes, àlies, arreglar errors de `self`), objectes amb estat, callbacks.
+- **Tres tipus d'exercici:** *predir* (què imprimeix?), *escriure* (una funció o classe, provada amb casos ocults) i *ordenar* (línies desordenades, *Parsons problems*, amb diverses estructures per plantilla i una línia que sobra).
+- **Correcció de *predir* tolerant amb el format:** decimals arrodonits, coma decimal, `0.` vs `0.0` i tuples o llistes sense el format exacte. Es dona per bo, però amb una nota que explica com ho escriuria Python. Amb els valors continua sent estricta.
+- **Interfície:** quant falta per dominar el concepte, exercicis de repàs marcats com a extra, punts i quatre insígnies, enunciat no seleccionable i enganxar desactivat a les respostes (`BLOQUEJA_COPIA` a `config.js`). Es registra el temps de cada exercici al Sheet.
 - **Domini:** 3 encerts seguits, i almenys un ha de ser escrivint codi. Els conceptes dominats tornen a sortir de tant en tant com a repàs.
 
 Ningú no pot impedir que facin servir IA a casa. Per això aquesta eina és de **pràctica formativa**, i els mínims es certifiquen a classe.
@@ -40,7 +42,7 @@ Ningú no pot impedir que facin servir IA a casa. Per això aquesta eina és de 
    - *Qui hi té accés:* **Qualsevol usuari** (cal perquè l'alumne no ha d'iniciar sessió; el script rebutja qualsevol codi que no sigui a la pestanya `Alumnes`)
 6. Copia l'URL que acaba en `/exec` a `config.js` → `ENDPOINT`.
 
-Les pestanyes `Esdeveniments` (un registre de cada exercici, amb la resposta) i `Progrés` (una fila per alumne i una columna per concepte: `✓` si l'ha dominat; si no, `ratxa · encerts/intents`) es creen soles.
+Les pestanyes `Esdeveniments` (un registre de cada exercici, amb la resposta i els segons que hi ha dedicat) i `Progrés` (una fila per alumne i una columna per concepte: `✓` si l'ha dominat; si no, `ratxa · encerts/intents`) es creen soles.
 
 ### 2. Servidor (cada vegada que canviï alguna cosa)
 
@@ -92,7 +94,7 @@ L'esperat de cada cas surt d'executar la referència. Per tant, no hi ha cap cla
 
 ## Provat (nov. 2026)
 
-- **Validador:** 63 plantilles × 300 variants, 0 problemes. Cada mutant falla.
+- **Validador:** 72 plantilles × 200 variants, 0 problemes. Cada mutant falla, i les línies que sobren als exercicis d'ordenar fan fallar el codi.
 - **Chrome headless (Playwright):**
   - el primer exercici apareix en ~3 s (Pyodide des del CDN);
   - 40 encerts seguits → 9 conceptes dominats;

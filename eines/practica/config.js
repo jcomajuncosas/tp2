@@ -21,6 +21,13 @@ window.CONFIG = {
   // Segons màxims d'execució del codi de l'alumne (bucle infinit → es talla).
   TIMEOUT_S: 6,
 
+  // Dificulta copiar l'enunciat i enganxar codi a les respostes (no ho impedeix del tot:
+  // només fa que passar-ho per una IA no sigui immediat). false = desactivat.
+  BLOQUEJA_COPIA: true,
+
+  // Punts (petita gamificació)
+  PUNTS: { predir: 10, escriure: 20, ordenar: 15, domini: 50 },
+
   PYODIDE: 'https://cdn.jsdelivr.net/pyodide/v0.28.3/full/',
-  VERSIO: '2026-11-21',
+  VERSIO: '2026-11-22',
 };
