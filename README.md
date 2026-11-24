@@ -42,7 +42,7 @@ TP2_2627/
 | 7 | Bloc 4b — pretty_midi, arpegiador, timing, MidiSynth | 04_midi | sessio07_sequenciador |
 | 8 | Bloc 5a — Oscillator, Envelope (ADSR), SamplePlayer, MIDI→freq | 05_sintesi | sessio08_oscil_ladors_classes |
 | 9 | Bloc 5b — Síntesi FM i envolvents amb estat | 05_sintesi | sessio09_fm_synth |
-| 10 | Bloc 5c — Consolidació: kit de percussió sintètica (Kick+Noise+MIDI) | 05_sintesi | sessio10_consolidacio |
+| 10 | Bloc 5c — La teva VeuFM amb teclat MIDI real + kick sintètic | 05_sintesi | sessio10_consolidacio |
 | 11 | Bloc 6 — FFT pràctic, extracció de features (centroid, MFCC, ZCR) | 06_analisi_ml | sessio11_fft_features |
 | 12 | Bloc 7 — Classificador KNN/decision tree/SVM, fronteres de decisió | 06_analisi_ml | sessio12_classificador |
 | 13-14 | Projecte final — presentació de l'ensemble, implementació dels rols | 07_projecte_final | sessio12_arquitectura_comuna |
